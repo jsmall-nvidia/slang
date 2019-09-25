@@ -710,6 +710,9 @@ standardProject "slang-glslang"
     addSourceDir("external/glslang/SPIRV")
     addSourceDir("external/glslang/StandAlone")
 
+    -- Includes
+    addSourceDir("external/glslang/glslang/Include")
+
     -- Unfortunately, blindly adding files like that also pulled in a declaration
     -- of a main entry point that we do *not* want, so we will specifically
     -- exclude that file from our build.
