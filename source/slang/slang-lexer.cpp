@@ -567,7 +567,8 @@ namespace Slang
         return value;
     }
 
-    FloatingPointLiteralValue getFloatingPointLiteralValue(Token const& token, UnownedStringSlice* outSuffix)
+#if 0
+    static FloatingPointLiteralValue _getFloatingPointLiteralValue(Token const& token, UnownedStringSlice* outSuffix)
     {
         FloatingPointLiteralValue value = 0;
 
@@ -578,9 +579,9 @@ namespace Slang
 
         bool seenDot = false;
         FloatingPointLiteralValue divisor = 1;
-        for( ;;)
+        for (;;)
         {
-            if(*cursor == '.')
+            if (*cursor == '.')
             {
                 cursor++;
                 seenDot = true;
@@ -588,59 +589,59 @@ namespace Slang
             }
 
             int digit = _maybeReadDigit(&cursor, radix);
-            if(digit < 0)
+            if (digit < 0)
                 break;
 
-            value = value*radix + digit;
+            value = value * radix + digit;
 
-            if(seenDot)
+            if (seenDot)
             {
                 divisor *= radix;
             }
         }
 
         // Now read optional exponent
-        if(_isNumberExponent(*cursor, radix))
+        if (_isNumberExponent(*cursor, radix))
         {
             cursor++;
 
             bool exponentIsNegative = false;
-            switch(*cursor)
+            switch (*cursor)
             {
-            default:
-                break;
+                default:
+                    break;
 
-            case '-':
-                exponentIsNegative = true;
-                cursor++;
-                break;
+                case '-':
+                    exponentIsNegative = true;
+                    cursor++;
+                    break;
 
-            case '+':
-                cursor++;
-                break;
+                case '+':
+                    cursor++;
+                    break;
             }
 
             int exponentRadix = 10;
             int exponent = 0;
 
-            for(;;)
+            for (;;)
             {
                 int digit = _maybeReadDigit(&cursor, exponentRadix);
-                if(digit < 0)
+                if (digit < 0)
                     break;
 
-                exponent = exponent*exponentRadix + digit;
+                exponent = exponent * exponentRadix + digit;
             }
 
             FloatingPointLiteralValue exponentBase = 10;
-            if(radix == 16)
+            if (radix == 16)
             {
                 exponentBase = 2;
             }
 
             FloatingPointLiteralValue exponentValue = pow(exponentBase, exponent);
 
-            if( exponentIsNegative )
+            if (exponentIsNegative)
             {
                 divisor *= exponentValue;
             }
@@ -652,12 +653,361 @@ namespace Slang
 
         value /= divisor;
 
-        if(outSuffix)
+        if (outSuffix)
         {
             *outSuffix = UnownedStringSlice(cursor, end);
         }
 
         return value;
+    }
+#endif
+
+    static const FloatingPointLiteralValue s_pow10[]
+    {
+        pow(10.0, -32),
+        pow(10.0, -31),
+        pow(10.0, -30),
+        pow(10.0, -29),
+
+        pow(10.0, -28),
+        pow(10.0, -27),
+        pow(10.0, -26),
+        pow(10.0, -25),
+
+        pow(10.0, -24),
+        pow(10.0, -23),
+        pow(10.0, -22),
+        pow(10.0, -21),
+
+        pow(10.0, -20),
+        pow(10.0, -19),
+        pow(10.0, -18),
+        pow(10.0, -17),
+
+        pow(10.0, -16),
+        pow(10.0, -15),
+        pow(10.0, -14),
+        pow(10.0, -13),
+
+        pow(10.0, -12),
+        pow(10.0, -11),
+        pow(10.0, -10),
+        pow(10.0, -9),
+
+        pow(10.0, -8),
+        pow(10.0, -7),
+        pow(10.0, -6),
+        pow(10.0, -5),
+
+        pow(10.0, -4),
+        pow(10.0, -3),
+        pow(10.0, -2),
+        pow(10.0, -1),
+
+        pow(10.0, 0),
+        pow(10.0, 1),
+        pow(10.0, 2),
+        pow(10.0, 3),
+
+        pow(10.0, 4),
+        pow(10.0, 5),
+        pow(10.0, 6),
+        pow(10.0, 7),
+
+        pow(10.0, 8),
+        pow(10.0, 9),
+        pow(10.0, 10),
+        pow(10.0, 11),
+
+        pow(10.0, 12),
+        pow(10.0, 13),
+        pow(10.0, 14),
+        pow(10.0, 15),
+
+        pow(10.0, 16),
+        pow(10.0, 17),
+        pow(10.0, 18),
+        pow(10.0, 19),
+
+        pow(10.0, 20),
+        pow(10.0, 21),
+        pow(10.0, 22),
+        pow(10.0, 23),
+
+        pow(10.0, 24),
+        pow(10.0, 25),
+        pow(10.0, 26),
+        pow(10.0, 27),
+
+        pow(10.0, 28),
+        pow(10.0, 29),
+        pow(10.0, 30),
+        pow(10.0, 31),
+
+        pow(10.0, 32),
+    };
+
+    static FloatingPointLiteralValue _pow10(int value)
+    {
+        if (value >= -32 && value <= 32)
+        {
+            return s_pow10[value + 32];
+        }
+        else
+        {
+            return pow(10.0, value);
+        }
+    }
+
+
+    static FloatingPointLiteralValue _getFloatingPointLiteralValueWithRadix(const UnownedStringSlice& in , int radix, UnownedStringSlice* outSuffix)
+    {
+        FloatingPointLiteralValue value = 0;
+
+        char const* cursor = in.begin();
+        char const* end = in.end();
+
+        bool seenDot = false;
+        FloatingPointLiteralValue divisor = 1;
+        for (;;)
+        {
+            if (*cursor == '.')
+            {
+                cursor++;
+                seenDot = true;
+                continue;
+            }
+
+            int digit = _maybeReadDigit(&cursor, radix);
+            if (digit < 0)
+                break;
+
+            value = value * radix + digit;
+
+            if (seenDot)
+            {
+                divisor *= radix;
+            }
+        }
+
+        // Now read optional exponent
+        if (_isNumberExponent(*cursor, radix))
+        {
+            cursor++;
+
+            bool exponentIsNegative = false;
+            switch (*cursor)
+            {
+                default:
+                    break;
+
+                case '-':
+                    exponentIsNegative = true;
+                    cursor++;
+                    break;
+
+                case '+':
+                    cursor++;
+                    break;
+            }
+
+            int exponentRadix = 10;
+            int exponent = 0;
+
+            for (;;)
+            {
+                int digit = _maybeReadDigit(&cursor, exponentRadix);
+                if (digit < 0)
+                    break;
+
+                exponent = exponent * exponentRadix + digit;
+            }
+
+            FloatingPointLiteralValue exponentBase = 10;
+            if (radix == 16)
+            {
+                exponentBase = 2;
+            }
+
+            FloatingPointLiteralValue exponentValue = pow(exponentBase, exponent);
+
+            if (exponentIsNegative)
+            {
+                divisor *= exponentValue;
+            }
+            else
+            {
+                value *= exponentValue;
+            }
+        }
+
+        value /= divisor;
+
+        if (outSuffix)
+        {
+            *outSuffix = UnownedStringSlice(cursor, end);
+        }
+
+        return value;
+    }
+
+    // Note! Does no handle negative.
+    static int64_t _calcIntegerDigitRunRadix10(const char** ioCursor, int* outDigitCount)
+    {
+        const char* cursor = *ioCursor;
+        // Most radix 10 digits can be held in a int64_t
+        const int maxDigits = 18;
+        int64_t value = 0;
+        int remainingDigits = maxDigits;
+        // Lets assume we can fit the digits before into int64_t
+        // We using int64_t, because uint64_t conversion can be slow on some targets
+        while (remainingDigits > 0)
+        {
+            const char c = *cursor;
+            if (c == '_')
+            {
+                cursor++;
+            }
+            else if (c >= '0' && c <= '9')
+            {
+                value = value * 10 + (c - '0');
+                cursor++;
+                remainingDigits--;
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        *ioCursor = cursor;
+        *outDigitCount = maxDigits - remainingDigits;
+        return value;
+    }
+
+    FloatingPointLiteralValue _calcFloatingPointDigitRunRadix10(const char** ioCursor, int* outDigitCount)
+    {
+        int totalDigitCount;
+
+        FloatingPointLiteralValue floatValue;
+        {
+            const int64_t value = _calcIntegerDigitRunRadix10(ioCursor, &totalDigitCount);
+            floatValue = FloatingPointLiteralValue(value);
+        }
+
+        // If we still have digits, we can keep going, but here we'll do calculation using integers to be fast, and then accumulate
+        {
+            char c = **ioCursor;
+            if (c >= '0' && c <= '9')
+            {
+                do
+                {
+                    int digitCount;
+                    const int64_t value = _calcIntegerDigitRunRadix10(ioCursor, &digitCount);
+
+                    floatValue = floatValue * _pow10(digitCount) + FloatingPointLiteralValue(value);
+                    totalDigitCount += digitCount;
+
+                    // Get what c is now
+                    c = **ioCursor;
+                } while (c >= '0' && c <= '9');
+            }
+        }
+
+        *outDigitCount = totalDigitCount;
+        return floatValue;
+    }
+
+    static FloatingPointLiteralValue _getFloatingPointLiteralValueRadix10(const UnownedStringSlice& in, UnownedStringSlice* outSuffix)
+    {
+        char const* cursor = in.begin();
+        char const* end = in.end();
+
+        int digitCount;
+        FloatingPointLiteralValue floatValue = _calcFloatingPointDigitRunRadix10(&cursor, &digitCount);
+        if (*cursor == '.')
+        {
+            // Skip .
+            cursor++;
+            int postDotCount;
+            FloatingPointLiteralValue postDotValue = _calcFloatingPointDigitRunRadix10(&cursor, &postDotCount);
+            floatValue = floatValue + postDotValue * _pow10(-postDotCount);
+        }
+
+        // Handle exponent
+        if (*cursor == 'e' || *cursor == 'E')
+        {
+            // Skip the e
+            cursor++;
+
+            bool exponentIsNegative = false;
+            switch (*cursor)
+            {
+                default:
+                    break;
+                case '-':
+                    exponentIsNegative = true;
+                    cursor++;
+                    break;
+
+                case '+':
+                    cursor++;
+                    break;
+            }
+
+            int exponent = 0;
+            for (;;)
+            {
+                int remainingDigits = 9;
+                while (remainingDigits > 0)
+                {
+                    const char c = *cursor;
+                    if (c == '_')
+                    {
+                        cursor++;
+                    }
+                    else if (c >= '0' && c <= '9')
+                    {
+                        exponent = exponent * 10 + (c - '0');
+                        cursor++;
+                        remainingDigits--;
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+                SLANG_ASSERT(remainingDigits > 0);
+                exponent = exponentIsNegative ? -exponent : exponent;
+                floatValue *= _pow10(exponent);
+            }
+        }
+
+        if (outSuffix)
+        {
+            *outSuffix = UnownedStringSlice(cursor, end);
+        }
+
+        return floatValue;
+    }
+
+    FloatingPointLiteralValue getFloatingPointLiteralValue(Token const& token, UnownedStringSlice* outSuffix)
+    {
+        char const* cursor = token.Content.begin();
+        char const* end = token.Content.end();
+        int radix = _readOptionalBase(&cursor);
+        UnownedStringSlice remaining(cursor, end);
+        switch (radix)
+        {
+            case 10:
+            {
+                return _getFloatingPointLiteralValueRadix10(remaining, outSuffix);
+            }
+            default:
+            {
+                return _getFloatingPointLiteralValueWithRadix(remaining, radix, outSuffix);
+            }
+        }
     }
 
     static void _lexStringLiteralBody(Lexer* lexer, char quote)
