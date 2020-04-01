@@ -851,13 +851,30 @@ namespace Slang
         return value;
     }
 
-    // Note! Does no handle negative.
-    static int64_t _calcIntegerDigitRunRadix10(const char** ioCursor, int* outDigitCount)
+    struct SplitFloat64
+    {
+        int64_t value;          ///< Value (without exponent)
+        int exponent;           ///< Raised to this exponent. What it is raised to depends on base of what was parsed..
+    };
+
+    static const char* _consumeDigits(const char* cursor)
+    {
+        while ((*cursor >= '0' && *cursor <= '9') || *cursor == '_')
+        {
+            cursor++;
+        }
+        return cursor;
+    }
+
+    static SplitFloat64 _parseSplitFloat64(const char** ioCursor)
     {
         const char* cursor = *ioCursor;
         // Most radix 10 digits can be held in a int64_t
         const int maxDigits = 18;
+
         int64_t value = 0;
+        int exponent = 0;
+
         int remainingDigits = maxDigits;
         // Lets assume we can fit the digits before into int64_t
         // We using int64_t, because uint64_t conversion can be slow on some targets
@@ -880,115 +897,165 @@ namespace Slang
             }
         }
 
-        *ioCursor = cursor;
-        *outDigitCount = maxDigits - remainingDigits;
-        return value;
-    }
-
-    FloatingPointLiteralValue _calcFloatingPointDigitRunRadix10(const char** ioCursor, int* outDigitCount)
-    {
-        int totalDigitCount;
-
-        FloatingPointLiteralValue floatValue;
+        // If there are no remaining digits
+        if (remainingDigits == 0)
         {
-            const int64_t value = _calcIntegerDigitRunRadix10(ioCursor, &totalDigitCount);
-            floatValue = FloatingPointLiteralValue(value);
-        }
-
-        // If we still have digits, we can keep going, but here we'll do calculation using integers to be fast, and then accumulate
-        {
-            char c = **ioCursor;
-            if (c >= '0' && c <= '9')
+            // We now just need to find the dot or the end
+            while (true)
             {
-                do
+                const char c = *cursor;
+                if (c == '_')
                 {
-                    int digitCount;
-                    const int64_t value = _calcIntegerDigitRunRadix10(ioCursor, &digitCount);
+                    cursor++;
+                    continue;
+                }
+                else if (c >= '0' && c <= '9')
+                {
+                    cursor++;
+                    exponent++;
+                    continue;
+                }
+                else if (c == '.')
+                {
+                    // Skip the ., and consume any digits following
+                    cursor = _consumeDigits(cursor + 1);
+                }
+                break;
+            }
+        }
+        else if (*cursor == '.')
+        {
+            // Save the value, before we do digits after .
+            const auto copyValue = value;
 
-                    floatValue = floatValue * _pow10(digitCount) + FloatingPointLiteralValue(value);
-                    totalDigitCount += digitCount;
+            // Skip the .
+            cursor++;
+            // We'll use this to check if all digits are 0
+            int orDigits = 0;
 
-                    // Get what c is now
-                    c = **ioCursor;
-                } while (c >= '0' && c <= '9');
+            while (remainingDigits > 0)
+            {
+                const char c = *cursor;
+                if (c == '_')
+                {
+                    cursor++;
+                }
+                else if (c >= '0' && c <= '9')
+                {
+                    const int digit = (c - '0');
+                    orDigits |= digit;
+                    // 
+                    value = value * 10 + digit;
+                    cursor++;
+                    exponent--;
+                    remainingDigits--;
+                }
+                else
+                {
+                    break;
+                }
+            }
+            // Consume any following digits
+            cursor = _consumeDigits(cursor);
+
+            // If the digits are all 0, then we can just throw away the exponent, and use the old mantissa
+            if (orDigits == 0)
+            {
+                exponent = 0;
+                value = copyValue;
             }
         }
 
-        *outDigitCount = totalDigitCount;
-        return floatValue;
+
+        // We are done
+        *ioCursor = cursor;
+        return SplitFloat64{ value, exponent };
+    }
+
+    // NOTE! Does not handle pathological cases like 0x80000000, or ints with more than 9 digits
+    // Thats ok here, because we are using just for the exponent, so it would be out of range
+    // To handle those cases, it will return +/-0x3fffffff. This is still well out of range and will mean
+    // no overflow when added with any exponent that came from 'regular' part.
+    static int _parseExponentInt(const char** ioCursor)
+    {
+        const char* cursor = *ioCursor;
+        bool exponentIsNegative = false;
+        switch (*cursor)
+        {
+            default:
+                break;
+            case '-':
+                exponentIsNegative = true;
+                cursor++;
+                break;
+
+            case '+':
+                cursor++;
+                break;
+        }
+
+        int exponent = 0;
+        for (;;)
+        {
+            // Maximum digits in a 32 bit int
+            const int maxDigits = 9;
+            int remainingDigits = maxDigits;
+            while (remainingDigits > 0)
+            {
+                const char c = *cursor;
+                if (c == '_')
+                {
+                    cursor++;
+                }
+                else if (c >= '0' && c <= '9')
+                {
+                    exponent = exponent * 10 + (c - '0');
+                    cursor++;
+                    remainingDigits--;
+                }
+                else
+                {
+                    break;
+                }
+            }
+            // If too big/small to hold, just make large number
+            exponent = (remainingDigits == 0) ? 0x3fffffff : exponent;
+
+            // Save the cursor pos
+            *ioCursor = cursor;
+            return exponentIsNegative ? -exponent : exponent;
+        }
     }
 
     static FloatingPointLiteralValue _getFloatingPointLiteralValueRadix10(const UnownedStringSlice& in, UnownedStringSlice* outSuffix)
     {
         char const* cursor = in.begin();
-        char const* end = in.end();
+        //char const* end = in.end();
 
-        int digitCount;
-        FloatingPointLiteralValue floatValue = _calcFloatingPointDigitRunRadix10(&cursor, &digitCount);
-        if (*cursor == '.')
-        {
-            // Skip .
-            cursor++;
-            int postDotCount;
-            FloatingPointLiteralValue postDotValue = _calcFloatingPointDigitRunRadix10(&cursor, &postDotCount);
-            floatValue = floatValue + postDotValue * _pow10(-postDotCount);
-        }
+        SplitFloat64 splitFloat = _parseSplitFloat64(&cursor);
 
         // Handle exponent
         if (*cursor == 'e' || *cursor == 'E')
         {
             // Skip the e
             cursor++;
+            int exponent = _parseExponentInt(&cursor);
+            splitFloat.exponent += exponent;
+        }
 
-            bool exponentIsNegative = false;
-            switch (*cursor)
-            {
-                default:
-                    break;
-                case '-':
-                    exponentIsNegative = true;
-                    cursor++;
-                    break;
-
-                case '+':
-                    cursor++;
-                    break;
-            }
-
-            int exponent = 0;
-            for (;;)
-            {
-                int remainingDigits = 9;
-                while (remainingDigits > 0)
-                {
-                    const char c = *cursor;
-                    if (c == '_')
-                    {
-                        cursor++;
-                    }
-                    else if (c >= '0' && c <= '9')
-                    {
-                        exponent = exponent * 10 + (c - '0');
-                        cursor++;
-                        remainingDigits--;
-                    }
-                    else
-                    {
-                        break;
-                    }
-                }
-                SLANG_ASSERT(remainingDigits > 0);
-                exponent = exponentIsNegative ? -exponent : exponent;
-                floatValue *= _pow10(exponent);
-            }
+        // Okay turn the splitFloat into a floating point value
+        FloatingPointLiteralValue value = FloatingPointLiteralValue(splitFloat.value);
+        if (splitFloat.exponent)
+        {
+            value *= _pow10(splitFloat.exponent);
         }
 
         if (outSuffix)
         {
-            *outSuffix = UnownedStringSlice(cursor, end);
+            *outSuffix = UnownedStringSlice(cursor, in.end());
         }
 
-        return floatValue;
+        return value;
     }
 
     FloatingPointLiteralValue getFloatingPointLiteralValue(Token const& token, UnownedStringSlice* outSuffix)
