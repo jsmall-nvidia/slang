@@ -651,12 +651,14 @@ struct Options
     String m_prefixMark;            ///< The prefix of the 'marker' used to identify a reflected type
     String m_postfixMark;           ///< The postfix of the 'marker' used to identify a reflected type
     String m_stripFilePrefix;       ///< Used for the 'origin' information, this is stripped from the source filename, and the remainder of the filename (without extension) is 'macroized'
+
+    String m_configPath;            ///< Path to a config file, to process
 };
 
 struct OptionsParser
 {
     /// Parse the parameters. NOTE! Must have the program path removed
-    SlangResult parse(int argc, const char*const* argv, DiagnosticSink* sink, Options& outOptions);
+    SlangResult parse(Index argc, const char*const* argv, DiagnosticSink* sink, Options& outOptions);
 
     SlangResult _parseArgWithValue(const char* option, String& outValue);
     SlangResult _parseArgReplaceValue(const char* option, String& outValue);
@@ -707,10 +709,10 @@ SlangResult OptionsParser::_parseArgReplaceValue(const char* option, String& ioV
     return SLANG_OK;
 }
 
-SlangResult OptionsParser::parse(int argc, const char*const* argv, DiagnosticSink* sink, Options& outOptions)
+SlangResult OptionsParser::parse(Index argc, const char*const* argv, DiagnosticSink* sink, Options& outOptions)
 {
     outOptions.reset();
-
+     
     m_index = 0;
     m_argCount = argc;
     m_args = argv;
@@ -763,6 +765,11 @@ SlangResult OptionsParser::parse(int argc, const char*const* argv, DiagnosticSin
             else if (arg == "-strip-prefix")
             {
                 SLANG_RETURN_ON_FAIL(_parseArgWithValue("-strip-prefix", outOptions.m_stripFilePrefix));
+                continue;
+            }
+            else if (arg == "-config")
+            {
+                SLANG_RETURN_ON_FAIL(_parseArgWithValue("-config", outOptions.m_configPath));
                 continue;
             }
 
@@ -1694,7 +1701,9 @@ public:
     }
 
 protected:
-    
+    SlangResult _calcArgs(const UnownedStringSlice& line, List<const char*>& outArgs);
+    SlangResult _decodeQuoted(UnownedStringSlice& ioLine, StringBuilder& out);
+
     NamePool m_namePool;
 
     Options m_options;
@@ -1702,7 +1711,6 @@ protected:
     SourceManager* m_sourceManager;
     IdentifierLookup m_identifierLookup;
 
-    
     StringSlicePool m_slicePool;
 };
 
@@ -2147,7 +2155,6 @@ SlangResult CPPExtractorApp::execute(const Options& options)
 {
     m_options = options;
 
-    
     CPPExtractor extractor(&m_slicePool, &m_namePool, m_sink, &m_identifierLookup);
 
     // Read in each of the input files
@@ -2211,13 +2218,145 @@ SlangResult CPPExtractorApp::execute(const Options& options)
     return SLANG_OK;
 }
 
-/// Execute
+static bool _isWhiteSpace(const char c)
+{
+    return (c == ' ' || c == '\t');
+}
+
+SlangResult CPPExtractorApp::_decodeQuoted(UnownedStringSlice& ioLine, StringBuilder& out)
+{
+    const char* cur = ioLine.begin();
+    const char*const end = ioLine.end();
+
+    while (cur < end)
+    {
+        const char c = *cur++;
+        switch (c)
+        {
+            case '"':
+            {
+                ioLine = UnownedStringSlice(cur, end);
+                return SLANG_OK;
+            }
+            case '\\':
+            {
+                if (cur < end)
+                {
+                    out.Append(*cur++);
+                }
+                break;
+            }
+            default:
+            {
+                out.Append(c);
+                break;
+            }
+        }
+    }
+    return SLANG_OK;
+}
+
+SlangResult CPPExtractorApp::_calcArgs(const UnownedStringSlice& line, List<const char*>& outArgs)
+{
+    const char* cur = line.begin();
+    const char* end = line.end();
+
+    while (cur < end)
+    {
+        // Remove any whitespace
+        if (_isWhiteSpace(*cur))
+        {
+            while (cur < end && _isWhiteSpace(*cur)) cur++;
+            continue;
+        }
+
+        const char* start = cur;
+
+        if (*cur == '"')
+        {
+            UnownedStringSlice remaining(cur, end);
+
+            // Extract the string without quotes
+
+            StringBuilder buf;
+            SLANG_RETURN_ON_FAIL(_decodeQuoted(remaining, buf));
+            cur = remaining.begin();
+
+            const StringSlicePool::Handle handle = m_slicePool.add(buf.getUnownedSlice());
+            outArgs.add(m_slicePool.getSlice(handle).begin());
+        }
+        else
+        {
+            // Find the end of the arg 
+            while (cur < end && !_isWhiteSpace(*cur)) cur++;
+
+            // Add to args
+            StringSlicePool::Handle handle = m_slicePool.add(UnownedStringSlice(start, cur));
+            outArgs.add(m_slicePool.getSlice(handle).begin());
+        }
+    }
+
+    return SLANG_OK;
+}
+
 SlangResult CPPExtractorApp::executeWithArgs(int argc, const char*const* argv)
 {
     Options options;
     OptionsParser optionsParser;
     SLANG_RETURN_ON_FAIL(optionsParser.parse(argc, argv, m_sink, options));
-    SLANG_RETURN_ON_FAIL(execute(options));
+
+    if (options.m_configPath.getLength())
+    {
+        String configContents;
+        if (SLANG_FAILED(readAllText(options.m_configPath, configContents)))
+        {
+            m_sink->diagnose(SourceLoc(), CPPDiagnostics::cannotOpenFile, options.m_configPath);
+            return SLANG_FAIL;
+        }
+
+        List<UnownedStringSlice> lines;
+        StringUtil::calcLines(configContents.getUnownedSlice(), lines);
+
+        for (Index i = 0; i < lines.getCount(); ++ i)
+        {
+            const UnownedStringSlice& line = lines[i];
+
+            if (line.startsWith("#"))
+            {
+                // Skip comments
+                continue;
+            }
+            else if (line.trim().getLength() == 0)
+            {
+                // And empty lines
+                continue;
+            }
+
+            const UnownedStringSlice extractorName = UnownedStringSlice::fromLiteral("slang-cpp-extractor");
+
+            if (!line.startsWith(extractorName))
+            {
+                StringBuilder buf;
+                buf << "Unhandled line " << (i + 1) << " in '" << options.m_configPath << "', line ignored.";
+                m_sink->diagnoseRaw(Severity::Warning, buf.getUnownedSlice());
+                continue;
+            }
+
+            // Okay we need to turn into something that can be parsed to the options parser to parse
+            List<const char*> lineArgs;
+
+            UnownedStringSlice argLine(line.begin() + extractorName.getLength(), line.end());
+            SLANG_RETURN_ON_FAIL(_calcArgs(argLine, lineArgs));
+
+            SLANG_RETURN_ON_FAIL(optionsParser.parse(lineArgs.getCount(), lineArgs.getBuffer(), m_sink, options));
+
+            SLANG_RETURN_ON_FAIL(execute(options));
+        }
+    }
+    else
+    {
+        SLANG_RETURN_ON_FAIL(execute(options));
+    }
     return SLANG_OK;
 }
 
