@@ -402,33 +402,89 @@ Result RenderTestApp::update(Window* window)
     return SLANG_OK;
 }
 
+struct RendererID
+{
+    typedef RendererID ThisType;
+    HashCode getHashCode() const
+    {
+        return combineHash(HashCode(type), adapter.getHashCode());
+    }
+    bool operator==(const ThisType& rhs) const { return type == rhs.type && adapter == rhs.adapter; }
+    bool operator!=(const ThisType& rhs) const { return !(*this == rhs); }
+
+    String getName()
+    {
+        StringBuilder rendererName;
+        rendererName << "[" << RendererUtil::toText(type) << "] ";
+        if (adapter.getLength() != 0)
+        {
+            rendererName << "'" << adapter << "'";
+        }
+        return rendererName;
+    }
+
+    RendererType type;
+    String adapter;
+};
+
+
+class WindowCache : public RefObject
+{
+public:
+
+    renderer_test::Window* getOrCreateWindow(const RendererID& id, Index width, Index height)
+    {
+        const RefPtr<renderer_test::Window>* windowPtr = m_map.TryGetValue(id);
+        if (windowPtr)
+        {
+            return *windowPtr;
+        }
+
+        RefPtr<renderer_test::Window> window = renderer_test::Window::create();
+
+        if (SLANG_FAILED(window->initialize(int(width), int(height))))
+        {
+            return nullptr;
+        }
+        m_map.Add(id, window);
+        return window;
+    }
+
+    Dictionary<RendererID,  RefPtr<renderer_test::Window>> m_map;
+};
+
+static SlangResult _createRenderer(const RendererID& id, Window* window, Index width, Index height, Slang::RefPtr<Renderer>& outRenderer)
+{
+    outRenderer.setNull();
+    
+    RendererUtil::CreateFunc createFunc = RendererUtil::getCreateFunc(gOptions.rendererType);
+
+    Slang::RefPtr<Renderer> renderer;
+    if (createFunc)
+    {
+        renderer= createFunc();
+    }
+
+    if (!renderer)
+    {
+        // So caller knows it couldn't even create the renderer
+        return SLANG_E_NOT_AVAILABLE;
+    }
+
+    Renderer::Desc desc;
+    desc.width = int(width);
+    desc.height = int(height);
+    desc.adapter = id.adapter;
+
+    SLANG_RETURN_ON_FAIL(renderer->initialize(desc, window->getHandle()));
+    outRenderer = renderer;
+    return SLANG_OK;
+}
+
+#if 0
 class RendererCache : public RefObject
 {
 public:
-    struct RendererID
-    {
-        typedef RendererID ThisType;
-        HashCode getHashCode() const
-        {
-            return combineHash(HashCode(type), adapter.getHashCode());
-        }
-        bool operator==(const ThisType& rhs) const { return type == rhs.type && adapter == rhs.adapter; }
-        bool operator!=(const ThisType& rhs) const { return !(*this == rhs); }
-
-        String getName()
-        {
-            StringBuilder rendererName;
-            rendererName << "[" << RendererUtil::toText(type) << "] ";
-            if (adapter.getLength() != 0)
-            {
-                rendererName << "'" << adapter << "'";
-            }
-            return rendererName;
-        }
-
-        RendererType type;
-        String adapter;
-    };
 
     struct Entry
     {
@@ -477,13 +533,11 @@ public:
         SLANG_RETURN_ON_FAIL(entry.window->initialize(int(width), int(height)));
         SLANG_RETURN_ON_FAIL(entry.renderer->initialize(desc, entry.window->getHandle()));
 
-        outEntry = entry;
-
-#if 0
         // Put in the cache
         Entry* dst = m_map.TryGetValueOrAdd(id, entry);
         *dst = entry;
-#endif
+
+        outEntry = entry;
 
         return SLANG_OK;
     }
@@ -507,6 +561,7 @@ public:
 
     Dictionary<RendererID, Entry> m_map;
 };
+#endif
 
 } //  namespace renderer_test
 
@@ -517,7 +572,7 @@ static SlangResult _innerMain(Slang::StdWriters* stdWriters, SlangSession* sessi
 
     StdWriters::setSingleton(stdWriters);
 
-    static RefPtr<RendererCache> rendererCache(new RendererCache);
+    static RefPtr<WindowCache> windowCache = new WindowCache;
 
 	// Parse command-line options
 	SLANG_RETURN_ON_FAIL(parseOptions(argcIn, argvIn, StdWriters::getError()));
@@ -774,20 +829,35 @@ static SlangResult _innerMain(Slang::StdWriters* stdWriters, SlangSession* sessi
 #endif
     }
 
-    RendererCache::Entry cacheEntry;
-
-    RendererCache::RendererID rendererID;
-    rendererID.type = gOptions.rendererType;
-    rendererID.adapter = gOptions.adapter;
-
+    Slang::RefPtr<renderer_test::Window> window;
+    Slang::RefPtr<Renderer> renderer;
     {
-        SlangResult res = rendererCache->getOrCreateRenderer(rendererID, gWindowWidth, gWindowHeight, cacheEntry);
+        
+        RendererID rendererID;
+        rendererID.type = gOptions.rendererType;
+        rendererID.adapter = gOptions.adapter;
+
+        String rendererName = rendererID.getName();
+
+        window = windowCache->getOrCreateWindow(rendererID, gWindowWidth, gWindowHeight);
+        //window = renderer_test::Window::create();
+        //window->initialize(gWindowWidth, gWindowHeight);
+
+        if (!window)
+        {
+            if (!gOptions.onlyStartup)
+            {
+                fprintf(stderr, "Unable to create window%s\n", rendererName.getBuffer());
+            }
+            return SLANG_FAIL;
+        }
+
+        SlangResult res = _createRenderer(rendererID, window, gWindowWidth, gWindowHeight, renderer);
 
         if (SLANG_FAILED(res))
         {
             if (!gOptions.onlyStartup)
             {
-                String rendererName = rendererID.getName();
                 if (res == SLANG_E_NOT_AVAILABLE)
                 {
                     fprintf(stderr, "Unable to create renderer %s\n", rendererName.getBuffer());
@@ -800,8 +870,6 @@ static SlangResult _innerMain(Slang::StdWriters* stdWriters, SlangSession* sessi
             return res;
         }
     }
-
-    Renderer* renderer = cacheEntry.renderer;
 
     {
         for (const auto& feature : gOptions.renderFeatures)
@@ -823,14 +891,19 @@ static SlangResult _innerMain(Slang::StdWriters* stdWriters, SlangSession* sessi
 	{
 		RefPtr<RenderTestApp> app(new RenderTestApp);
 		SLANG_RETURN_ON_FAIL(app->initialize(session, renderer, gOptions, input));
-
-        if (cacheEntry.window)
+        
+        if (window)
         {
-            cacheEntry.window->show();
-            return cacheEntry.window->runLoop(app);
+            window->show();
+            SlangResult res = window->runLoop(app);
+
+            renderer->waitForGpu();
+
+            return res;
         }
         else
         {
+            renderer->waitForGpu();
             return SLANG_OK;
         }
 	}
