@@ -839,9 +839,9 @@ static SlangResult _innerMain(Slang::StdWriters* stdWriters, SlangSession* sessi
 
         String rendererName = rendererID.getName();
 
-        window = windowCache->getOrCreateWindow(rendererID, gWindowWidth, gWindowHeight);
-        //window = renderer_test::Window::create();
-        //window->initialize(gWindowWidth, gWindowHeight);
+        //window = windowCache->getOrCreateWindow(rendererID, gWindowWidth, gWindowHeight);
+        window = renderer_test::Window::create();
+        window->initialize(gWindowWidth, gWindowHeight);
 
         if (!window)
         {
