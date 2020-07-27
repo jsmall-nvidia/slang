@@ -2034,7 +2034,17 @@ SlangResult CPPExtractorApp::calcChildrenHeader(CPPExtractor& extractor, StringB
                 // Define the derived types
                 out << "#define " << m_options.m_prefixMark << "FIELDS_" << reflectTypeName << "_" << node->m_name.getContent() << "(_x_, _param_)";
 
-                if (node->m_fields.getCount() > 0)
+                const Index fieldsCount = node->m_fields.getCount();
+
+                // Count the number of fields which are reflected
+                Index numReflectedFields = 0;
+                for (Index j = 0; j < fieldsCount; ++j)
+                {
+                    const auto& field = node->m_fields[j];
+                    numReflectedFields += Index(field.isReflected());
+                }
+
+                if (numReflectedFields)
                 {
                     out << "\\\n";
 
@@ -2054,7 +2064,6 @@ SlangResult CPPExtractorApp::calcChildrenHeader(CPPExtractor& extractor, StringB
                             _indent(1, out);
 
                             // NOTE! We put the type field in brackets, such that there is no issue with templates containing a comma.
-                            // If stringified
                             out << "_x_(" << field.name.getContent() << ", (" << field.type << "), _param_)";
                             previousField = true;
                         }

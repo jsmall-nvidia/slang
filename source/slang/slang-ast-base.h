@@ -30,6 +30,8 @@ class NodeBase
 
     SyntaxClass<NodeBase> getClass() { return SyntaxClass<NodeBase>(&getClassInfo()); }
 
+    SLANG_UNREFLECTED
+
         /// The type of the node. ASTNodeType(-1) is an invalid node type, and shouldn't appear on any
         /// correctly constructed (through ASTBuilder) NodeBase derived class. 
         /// The actual type is set when constructed on the ASTBuilder. 
