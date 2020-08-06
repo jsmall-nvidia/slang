@@ -17,10 +17,15 @@ TestContext::TestContext()
 
 Result TestContext::init()
 {
-    m_session = spCreateSession(nullptr);
-    if (!m_session)
+    if (m_session == nullptr)
     {
-        return SLANG_FAIL;
+        m_session = spCreateSession(nullptr);
+        if (!m_session)
+        {
+            return SLANG_FAIL;
+        }
+
+        TestToolUtil::setSessionDefaultPrelude(m_exePath.getBuffer(), m_session);
     }
 
     return SLANG_OK;
@@ -33,6 +38,16 @@ TestContext::~TestContext()
         spDestroySession(m_session);
     }
 }
+
+void TestContext::release()
+{
+    if (m_session)
+    {
+        spDestroySession(m_session);
+        m_session = nullptr;
+    }
+}
+
 
 TestContext::InnerMainFunc TestContext::getInnerMainFunc(const String& dirPath, const String& name)
 {

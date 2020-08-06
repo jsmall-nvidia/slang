@@ -146,6 +146,7 @@ class CacheFileSystem: public ISlangFileSystemExt, public RefObject
 
     struct PathInfo
     {
+        static int s_count;
         PathInfo(const String& uniqueIdentity)
         {
             m_uniqueIdentity = new StringBlob(uniqueIdentity);
@@ -156,8 +157,12 @@ class CacheFileSystem: public ISlangFileSystemExt, public RefObject
             m_getCanonicalPathResult = CompressedResult::Uninitialized;
 
             m_pathType = SLANG_PATH_TYPE_FILE;
+            s_count++;
         }
-
+        ~PathInfo()
+        {
+            s_count--;
+        }
         /// Get the unique identity path as a string
         const String& getUniqueIdentity() const { SLANG_ASSERT(m_uniqueIdentity); return m_uniqueIdentity->getString(); }
 

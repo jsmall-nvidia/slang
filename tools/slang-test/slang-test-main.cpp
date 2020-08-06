@@ -3077,7 +3077,11 @@ void runTestsOnFile(
             }
             else
             {
+                context->release();
+                context->init();
+
                 testResult = runTest(context, filePath, outputStem, testName, testDetails.options);
+
             }
 
             reporter->addResult(testResult);
@@ -3189,9 +3193,9 @@ SlangResult innerMain(int argc, char** argv)
 
     // The context holds useful things used during testing
     TestContext context;
-    SLANG_RETURN_ON_FAIL(SLANG_FAILED(context.init()))
+    context.m_exePath = argv[0];
 
-    TestToolUtil::setSessionDefaultPrelude(argv[0], context.getSession());
+    SLANG_RETURN_ON_FAIL(SLANG_FAILED(context.init()))
 
     auto& categorySet = context.categorySet;
 

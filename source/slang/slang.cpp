@@ -2729,6 +2729,13 @@ SLANG_API void spDestroySession(
     SLANG_ASSERT(session->debugGetReferenceCount() == 1);
     // Release
     session->release();
+
+    // Okay now check PathInfo
+
+    if (Slang::CacheFileSystem::PathInfo::s_count)
+    {
+        SLANG_BREAKPOINT(0);
+    }
 }
 
 SLANG_API const char* spGetBuildTagString()

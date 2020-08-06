@@ -84,6 +84,7 @@ class TestContext
     SlangSession* getSession() const { return m_session;  }
 
     SlangResult init();
+    void release();
 
         /// Get the inner main function (from shared library)
     InnerMainFunc getInnerMainFunc(const Slang::String& dirPath, const Slang::String& name);
@@ -126,6 +127,7 @@ class TestContext
 
     Slang::RefPtr<Slang::DownstreamCompilerSet> compilerSet;
 
+    Slang::String m_exePath;
 protected:
     struct SharedLibraryTool
     {
@@ -134,6 +136,7 @@ protected:
     };
 
     SlangSession* m_session;
+
 
     Slang::Dictionary<Slang::String, SharedLibraryTool> m_sharedLibTools;
 };

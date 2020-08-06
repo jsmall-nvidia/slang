@@ -7,6 +7,8 @@
 namespace Slang
 {
 
+/* static */int CacheFileSystem::PathInfo::s_count = 0;;
+
 // Allocate static const storage for the various interface IDs that the Slang API needs to expose
 static const Guid IID_ISlangUnknown = SLANG_UUID_ISlangUnknown;
 static const Guid IID_ISlangFileSystem = SLANG_UUID_ISlangFileSystem;
