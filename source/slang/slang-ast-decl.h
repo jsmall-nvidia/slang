@@ -27,6 +27,11 @@ class ContainerDecl: public Decl
 
     void addMember(Decl* decl)
     {
+        if (isIterating)
+        {
+            SLANG_BREAKPOINT(0);
+        }
+
         SLANG_ASSERT(decl && decl->parentDecl == nullptr);
         decl->parentDecl = this;
         _members.add(decl);
@@ -52,6 +57,8 @@ class ContainerDecl: public Decl
 
     //
     SLANG_UNREFLECTED   // We don't want to reflect the following fields
+
+    bool isIterating = false;
 
     // Denotes how much of Members has been placed into the dictionary/transparentMembers.
     // If this value equals the Members.getCount(), the dictionary is completely full and valid.

@@ -788,6 +788,11 @@ namespace Slang
             // declarations under a statement (e.g., in a function body),
             // and we don't want to check such local declarations here.
             //
+
+            SLANG_ASSERT(!containerDecl->isIterating);
+
+            containerDecl->isIterating = true;
+
             const auto& members = containerDecl->getMembers();
 
             const Index count = members.getCount();
@@ -801,8 +806,11 @@ namespace Slang
 
                 _ensureAllDeclsRec(visitor, childDecl, state);
 
-                SLANG_ASSERT(members.getCount() == count);
+                //SLANG_ASSERT(members.getCount() == count);
+
             }
+            containerDecl->isIterating = false;
+
         }
 
         // Note: the "inner" declaration of a `GenericDecl` is currently
