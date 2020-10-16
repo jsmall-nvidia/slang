@@ -790,7 +790,9 @@ namespace Slang
             //
             const auto& members = containerDecl->getMembers();
 
-            for(Index i = 0; i < members.getCount(); ++i)
+            const Index count = members.getCount();
+
+            for(Index i = 0; i < count; ++i)
             {
                 auto childDecl = members[i];
 
@@ -798,6 +800,8 @@ namespace Slang
                     continue;
 
                 _ensureAllDeclsRec(visitor, childDecl, state);
+
+                SLANG_ASSERT(members.getCount() == count);
             }
         }
 
