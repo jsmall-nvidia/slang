@@ -788,8 +788,12 @@ namespace Slang
             // declarations under a statement (e.g., in a function body),
             // and we don't want to check such local declarations here.
             //
-            for(auto childDecl : containerDecl->getMembers())
+            const auto& members = containerDecl->getMembers();
+
+            for(Index i = 0; i < members.getCount(); ++i)
             {
+                auto childDecl = members[i];
+
                 if(as<ScopeDecl>(childDecl))
                     continue;
 
