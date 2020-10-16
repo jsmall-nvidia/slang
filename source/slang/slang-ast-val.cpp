@@ -120,7 +120,7 @@ Val* GenericParamIntVal::_substituteImplOverride(ASTBuilder* /* astBuilder */, S
             continue;
 
         int index = 0;
-        for (auto m : genericDecl->members)
+        for (auto m : genericDecl->getMembers())
         {
             if (m == declRef.getDecl())
             {
@@ -237,7 +237,7 @@ Val* DeclaredSubtypeWitness::_substituteImplOverride(ASTBuilder* astBuilder, Sub
 
                 bool found = false;
                 Index index = 0;
-                for (auto m : genericDecl->members)
+                for (auto m : genericDecl->getMembers())
                 {
                     if (auto constraintParam = as<GenericTypeConstraintDecl>(m))
                     {

@@ -149,7 +149,7 @@ namespace Slang
         if(!genericDecl)
             return;
 
-        for(auto m : genericDecl->members)
+        for(auto m : genericDecl->getMembers())
         {
             if(auto genericTypeParam = as<GenericTypeParamDecl>(m))
             {
@@ -602,7 +602,7 @@ namespace Slang
         //
         HashSet<Module*> requiredModuleSet;
 
-        for( auto globalDecl : moduleDecl->members )
+        for( auto globalDecl : moduleDecl->getMembers() )
         {
             if(auto globalVar = as<VarDecl>(globalDecl))
             {
@@ -866,7 +866,7 @@ namespace Slang
             for(Index tt = 0; tt < translationUnitCount; ++tt)
             {
                 auto translationUnit = compileRequest->translationUnits[tt];
-                for( auto globalDecl : translationUnit->getModuleDecl()->members )
+                for( auto globalDecl : translationUnit->getModuleDecl()->getMembers() )
                 {
                     auto maybeFuncDecl = globalDecl;
                     if( auto genericDecl = as<GenericDecl>(maybeFuncDecl) )

@@ -22,18 +22,35 @@ class ContainerDecl: public Decl
 {
     SLANG_ABSTRACT_CLASS(ContainerDecl)
 
-    List<Decl*> members;
+    const List<Decl*>& getMembers() const { return _members; }
+    Decl* getMemberAt(Index i) const { return _members[i]; }
+
+    void addMember(Decl* decl)
+    {
+        SLANG_ASSERT(decl && decl->parentDecl == nullptr);
+        decl->parentDecl = this;
+        _members.add(decl);
+    }
 
     template<typename T>
     FilteredMemberList<T> getMembersOfType()
     {
-        return FilteredMemberList<T>(members);
+        return FilteredMemberList<T>(_members);
     }
 
-    bool isMemberDictionaryValid() const { return dictionaryLastCount == members.getCount(); }
+    bool isMemberDictionaryValid() const { return dictionaryLastCount == _members.getCount(); }
 
     void invalidateMemberDictionary() { dictionaryLastCount = -1; }
 
+//private:
+
+ //   SLANG_REFLECTED
+
+    List<Decl*> _members;
+
+//public:
+
+    //
     SLANG_UNREFLECTED   // We don't want to reflect the following fields
 
     // Denotes how much of Members has been placed into the dictionary/transparentMembers.

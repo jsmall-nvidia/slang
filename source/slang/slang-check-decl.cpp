@@ -522,7 +522,7 @@ namespace Slang
         genericSubst->genericDecl = genericDecl;
         genericSubst->outer = outerSubst;
 
-        for( auto mm : genericDecl->members )
+        for( auto mm : genericDecl->getMembers() )
         {
             if( auto genericTypeParamDecl = as<GenericTypeParamDecl>(mm) )
             {
@@ -535,7 +535,7 @@ namespace Slang
         }
 
         // create default substitution arguments for constraints
-        for (auto mm : genericDecl->members)
+        for (auto mm : genericDecl->getMembers())
         {
             if (auto genericTypeConstraintDecl = as<GenericTypeConstraintDecl>(mm))
             {
@@ -788,7 +788,7 @@ namespace Slang
             // declarations under a statement (e.g., in a function body),
             // and we don't want to check such local declarations here.
             //
-            for(auto childDecl : containerDecl->members)
+            for(auto childDecl : containerDecl->getMembers())
             {
                 if(as<ScopeDecl>(childDecl))
                     continue;
@@ -1044,7 +1044,7 @@ namespace Slang
     {
         genericDecl->setCheckState(DeclCheckState::ReadyForLookup);
 
-        for (auto m : genericDecl->members)
+        for (auto m : genericDecl->getMembers())
         {
             if (auto typeParam = as<GenericTypeParamDecl>(m))
             {
@@ -1125,7 +1125,7 @@ namespace Slang
 
         if(auto containerDecl = as<ContainerDecl>(decl))
         {
-            for(auto childDecl : containerDecl->members)
+            for(auto childDecl : containerDecl->getMembers())
             {
                 if(as<ScopeDecl>(childDecl))
                     continue;
@@ -1397,12 +1397,12 @@ namespace Slang
         DeclRef<GenericDecl>        requirementGenDecl,
         RefPtr<WitnessTable>        witnessTable)
     {
-        if (genDecl.getDecl()->members.getCount() != requirementGenDecl.getDecl()->members.getCount())
+        if (genDecl.getDecl()->getMembers().getCount() != requirementGenDecl.getDecl()->getMembers().getCount())
             return false;
-        for (Index i = 0; i < genDecl.getDecl()->members.getCount(); i++)
+        for (Index i = 0; i < genDecl.getDecl()->getMembers().getCount(); i++)
         {
-            auto genMbr = genDecl.getDecl()->members[i];
-            auto requiredGenMbr = genDecl.getDecl()->members[i];
+            auto genMbr = genDecl.getDecl()->getMemberAt(i);
+            auto requiredGenMbr = genDecl.getDecl()->getMemberAt(i);
             if (auto genTypeMbr = as<GenericTypeParamDecl>(genMbr))
             {
                 if (auto requiredGenTypeMbr = as<GenericTypeParamDecl>(requiredGenMbr))
@@ -1706,8 +1706,7 @@ namespace Slang
             // We need to add the parameter as a child declaration of
             // the method we are building.
             //
-            synParamDecl->parentDecl = synFuncDecl;
-            synFuncDecl->members.add(synParamDecl);
+            synFuncDecl->addMember(synParamDecl);
 
             // For each paramter, we will create an argument expression
             // for the call in the function body.
@@ -2004,8 +2003,7 @@ namespace Slang
                 // We need to add the parameter as a child declaration of
                 // the accessor we are building.
                 //
-                synParamDecl->parentDecl = synAccessorDecl;
-                synAccessorDecl->members.add(synParamDecl);
+                synAccessorDecl->addMember(synParamDecl);
 
                 // For each paramter, we will create an argument expression
                 // to represent it in the body of the accessor.
@@ -2192,8 +2190,7 @@ namespace Slang
 
             synAccessorDecl->body = synBodyStmt;
 
-            synAccessorDecl->parentDecl = synPropertyDecl;
-            synPropertyDecl->members.add(synAccessorDecl);
+            synPropertyDecl->addMember(synAccessorDecl);
 
             // If synthesis of an accessor worked, then we will record it into
             // a local dictionary. We do *not* install the accessor into the
@@ -3017,10 +3014,11 @@ namespace Slang
             Type* enumTypeType = getASTBuilder()->getEnumTypeType();
 
             InheritanceDecl* enumConformanceDecl = m_astBuilder->create<InheritanceDecl>();
-            enumConformanceDecl->parentDecl = decl;
+            
             enumConformanceDecl->loc = decl->loc;
             enumConformanceDecl->base.type = getASTBuilder()->getEnumTypeType();
-            decl->members.add(enumConformanceDecl);
+
+            decl->addMember(enumConformanceDecl);
 
             // The `__EnumType` interface has one required member, the `__Tag` type.
             // We need to satisfy this requirement automatically, rather than require
@@ -3038,7 +3036,7 @@ namespace Slang
             {
                 if(auto enumTypeTypeInterfaceDecl = as<InterfaceDecl>(enumTypeTypeDeclRefType->declRef.getDecl()))
                 {
-                    for(auto memberDecl : enumTypeTypeInterfaceDecl->members)
+                    for(auto memberDecl : enumTypeTypeInterfaceDecl->getMembers())
                     {
                         if(memberDecl->getName() == tagAssociatedTypeName)
                         {
@@ -3226,7 +3224,7 @@ namespace Slang
         List<Decl*>&                        outParams,
         List<GenericTypeConstraintDecl*>&   outConstraints)
     {
-        for (auto dd : decl->members)
+        for (auto dd : decl->getMembers())
         {
             if (dd == decl->inner)
                 continue;
@@ -3510,7 +3508,7 @@ namespace Slang
     {
         GenericSubstitution* subst = m_astBuilder->create<GenericSubstitution>();
         subst->genericDecl = genericDecl;
-        for (auto dd : genericDecl->members)
+        for (auto dd : genericDecl->getMembers())
         {
             if (dd == genericDecl->inner)
                 continue;
@@ -4249,8 +4247,7 @@ namespace Slang
             GetterDecl* getterDecl = m_astBuilder->create<GetterDecl>();
             getterDecl->loc = decl->loc;
 
-            getterDecl->parentDecl = decl;
-            decl->members.add(getterDecl);
+            decl->addMember(getterDecl);
         }
     }
 
@@ -4383,8 +4380,7 @@ namespace Slang
             newValueParam->nameAndLoc.name = getName("newValue");
             newValueParam->nameAndLoc.loc = decl->loc;
 
-            newValueParam->parentDecl = decl;
-            decl->members.add(newValueParam);
+            decl->addMember(newValueParam);
         }
 
         // The new-value parameter is expected to have the

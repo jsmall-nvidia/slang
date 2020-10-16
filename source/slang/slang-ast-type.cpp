@@ -197,7 +197,7 @@ Val* DeclRefType::_substituteImplOverride(ASTBuilder* astBuilder, SubstitutionSe
                 continue;
 
             int index = 0;
-            for (auto m : genericDecl->members)
+            for (auto m : genericDecl->getMembers())
             {
                 if (m == genericTypeParamDecl)
                 {

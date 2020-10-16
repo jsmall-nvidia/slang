@@ -161,7 +161,7 @@ namespace Slang
         //
         // TODO: This step should skip `static` fields.
         //
-        for(auto member : structDecl->members)
+        for(auto member : structDecl->getMembers())
         {
             if(auto varMember = as<VarDecl>(member))
             {
@@ -173,8 +173,7 @@ namespace Slang
                 paramDecl->loc = member->loc;
                 paramDecl->setCheckState(DeclCheckState::Checked);
 
-                paramDecl->parentDecl = attrDecl;
-                attrDecl->members.add(paramDecl);
+                attrDecl->addMember(paramDecl);
             }
         }
 
@@ -185,9 +184,8 @@ namespace Slang
         //
         // TODO: handle the case where `parentDecl` is generic?
         //
-        attrDecl->parentDecl = parentDecl;
-        parentDecl->members.add(attrDecl);
-        
+        parentDecl->addMember(attrDecl);
+
         // Finally, we perform any required semantic checks on
         // the newly constructed attribute decl.
         //

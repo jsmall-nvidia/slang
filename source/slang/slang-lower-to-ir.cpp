@@ -5068,7 +5068,7 @@ struct DeclLoweringVisitor : DeclVisitor<DeclLoweringVisitor, LoweredValInfo>
 
     LoweredValInfo visitExtensionDecl(ExtensionDecl* decl)
     {
-        for (auto & member : decl->members)
+        for (auto member : decl->getMembers())
             ensureDecl(context, member);
         return LoweredValInfo();
     }
@@ -5678,7 +5678,7 @@ struct DeclLoweringVisitor : DeclVisitor<DeclLoweringVisitor, LoweredValInfo>
         //
         // First we start with type and value parameters,
         // in the order they were declared.
-        for (auto member : genericDecl->members)
+        for (auto member : genericDecl->getMembers())
         {
             if (auto typeParamDecl = as<GenericTypeParamDecl>(member))
             {
@@ -5691,7 +5691,7 @@ struct DeclLoweringVisitor : DeclVisitor<DeclLoweringVisitor, LoweredValInfo>
         }
         // Then we emit constraint parameters, again in
         // declaration order.
-        for (auto member : genericDecl->members)
+        for (auto member : genericDecl->getMembers())
         {
             if (auto constraintDecl = as<GenericTypeConstraintDecl>(member))
             {
@@ -6006,7 +6006,7 @@ struct DeclLoweringVisitor : DeclVisitor<DeclLoweringVisitor, LoweredValInfo>
         // First, compute the number of requirement entries that will be included in this
         // interface type.
         UInt operandCount = 0;
-        for (auto requirementDecl : decl->members)
+        for (auto requirementDecl : decl->getMembers())
         {
             operandCount++;
             // As a special case, any type constraints placed
@@ -6048,7 +6048,7 @@ struct DeclLoweringVisitor : DeclVisitor<DeclLoweringVisitor, LoweredValInfo>
 
         UInt entryIndex = 0;
 
-        for (auto requirementDecl : decl->members)
+        for (auto requirementDecl : decl->getMembers())
         {
             auto entry = subBuilder->createInterfaceRequirementEntry(
                 getInterfaceRequirementKey(requirementDecl),
@@ -6346,7 +6346,7 @@ struct DeclLoweringVisitor : DeclVisitor<DeclLoweringVisitor, LoweredValInfo>
         //
         // First we start with type and value parameters,
         // in the order they were declared.
-        for (auto member : genericDecl->members)
+        for (auto member : genericDecl->getMembers())
         {
             if (auto typeParamDecl = as<GenericTypeParamDecl>(member))
             {
@@ -6366,7 +6366,7 @@ struct DeclLoweringVisitor : DeclVisitor<DeclLoweringVisitor, LoweredValInfo>
         }
         // Then we emit constraint parameters, again in
         // declaration order.
-        for (auto member : genericDecl->members)
+        for (auto member : genericDecl->getMembers())
         {
             if (auto constraintDecl = as<GenericTypeConstraintDecl>(member))
             {
@@ -7588,7 +7588,7 @@ static void ensureAllDeclsRec(
     //
     if(auto containerDecl = as<AggTypeDeclBase>(decl))
     {
-        for (auto memberDecl : containerDecl->members)
+        for (auto memberDecl : containerDecl->getMembers())
         {
             ensureAllDeclsRec(context, memberDecl);
         }
@@ -7645,7 +7645,7 @@ IRModule* generateIRForTranslationUnit(
     //
     // Next, ensure that all other global declarations have
     // been emitted.
-    for (auto decl : translationUnit->getModuleDecl()->members)
+    for (auto decl : translationUnit->getModuleDecl()->getMembers())
     {
         ensureAllDeclsRec(context, decl);
     }

@@ -1095,8 +1095,7 @@ namespace Slang
     {
         if (container)
         {
-            member->parentDecl = container;
-            container->members.add(member);
+            container->addMember(member);
         }
     }
 
