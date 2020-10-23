@@ -16,6 +16,7 @@
 namespace Slang
 {
 
+
 class Linkage;
 
 /*
@@ -28,13 +29,20 @@ docs/design/serialization.md
 typedef uint32_t SerialSourceLoc;
 class NodeBase;
 
-// Pre-declare
 class SerialClasses;
 class SerialWriter;
 class SerialReader;
 
 struct SerialClass;
 struct SerialField;
+
+class ISerialReplacer
+{
+public:
+    virtual NodeBase* replace(NodeBase* node) = 0;
+    virtual RefObject* replace(RefObject* obj) = 0;
+};
+
 
 // Type used to implement mechanisms to convert to and from serial types.
 template <typename T>

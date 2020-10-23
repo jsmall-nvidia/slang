@@ -66,6 +66,13 @@ struct SerialDeclRefBaseTypeInfo
         native.decl = reader->getPointer(serial.decl).dynamicCast<Decl>();
         native.substitutions.substitutions = reader->getPointer(serial.substitutions).dynamicCast<Substitutions>();
     }
+    static void replace(ISerialReplacer* replacer, void* inNative)
+    {
+        DeclRefBase& native = *(DeclRefBase*)(inNative);
+        native.decl = dynamicCast<Decl>(replacer->replace(native.decl));
+        native.substitutions.substitutions = dynamicCast<Substitutions>(native.substitutions.substitutions);
+    }
+
     static const SerialFieldType* getFieldType()
     {
         static const SerialFieldType type = { sizeof(SerialType), uint8_t(SerialAlignment), &toSerial, &toNative };

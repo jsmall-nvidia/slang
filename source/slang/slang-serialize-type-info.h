@@ -25,6 +25,7 @@ struct SerialBasicTypeInfo
 
     static void toSerial(SerialWriter* writer, const void* native, void* serial) { SLANG_UNUSED(writer); *(T*)serial = *(const T*)native; }
     static void toNative(SerialReader* reader, const void* serial, void* native) { SLANG_UNUSED(reader); *(T*)native = *(const T*)serial; }
+    static void replace(ISerialReplacer* replacer, void* native) { SLANG_UNUSED(replacer); SLANG_UNUSED(native); }
 
     static const SerialType* getType()
     {
@@ -43,6 +44,7 @@ struct SerialConvertTypeInfo
 
     static void toSerial(SerialWriter* writer, const void* native, void* serial) { SLANG_UNUSED(writer); *(SERIAL_T*)serial = SERIAL_T(*(const NATIVE_T*)native); }
     static void toNative(SerialReader* reader, const void* serial, void* native) { SLANG_UNUSED(reader); *(NATIVE_T*)native = NATIVE_T(*(const SERIAL_T*)serial); }
+    static void replace(ISerialReplacer* replacer, void* native) { SLANG_UNUSED(replacer); SLANG_UNUSED(native); }
 };
 
 template <typename T>
@@ -55,6 +57,7 @@ struct SerialIdentityTypeInfo
 
     static void toSerial(SerialWriter* writer, const void* native, void* serial) { SLANG_UNUSED(writer); *(T*)serial = *(const T*)native; }
     static void toNative(SerialReader* reader, const void* serial, void* native) { SLANG_UNUSED(reader); *(T*)native = *(const T*)serial; }
+    static void replace(ISerialReplacer* replacer, void* native) { SLANG_UNUSED(replacer); SLANG_UNUSED(native); }
 };
 
 // Don't need to convert the index type
@@ -119,6 +122,14 @@ struct SerialTypeInfo<T[N]>
             ElementASTSerialType::toNative(reader, serial + i, native + i);
         }
     }
+    static void replace(ISerialReplacer* replacer, void* inNative)
+    {
+        const T* native = (const T*)inNative;
+        for (Index i = 0; i < Index(N); ++i)
+        {
+            T::replace(replacer, &native[i]);
+        }
+    }
 };
 
 // Special case bool - as we can't rely on size alignment 
@@ -140,6 +151,7 @@ struct SerialTypeInfo<bool>
         SLANG_UNUSED(reader);
         *(NativeType*)outNative = (*(const SerialType*)inSerial) != 0;
     }
+    static void replace(ISerialReplacer* replacer, void* native) { SLANG_UNUSED(replacer); SLANG_UNUSED(native); }
 };
 
 // Pointer
@@ -164,6 +176,11 @@ struct SerialTypeInfo<T*>
     {
         *(T**)outNative = reader->getPointer(*(const SerialType*)inSerial).dynamicCast<T>();
     }
+    static void replace(ISerialReplacer* replacer, void* inNative)
+    {
+        NativeType& native = *(NativeType*)inNative;
+        native = dynamicCast<T>(replacer->replace(native));
+    }
 };
 
 // Special case Name
@@ -175,6 +192,11 @@ struct SerialTypeInfo<Name*> : public SerialTypeInfo<RefObject*>
     static void toNative(SerialReader* reader, const void* inSerial, void* outNative)
     {
         *(Name**)outNative = reader->getName(*(const SerialType*)inSerial);
+    }
+    static void replace(ISerialReplacer* replacer, void* inNative)
+    {
+        Name*& native = *(Name**)inNative;
+        native = dynamicCast<Name>(replacer->replace(native));
     }
 };
 
@@ -205,6 +227,18 @@ struct SerialTypeInfo<List<T, ALLOCATOR>>
         auto& src = *(const SerialType*)serial;
 
         reader->getArray(src, dst);
+    }
+    static void replace(ISerialReplacer* replacer, void* inNative)
+    {
+        auto& native = *(const NativeType*)native;
+
+        const Index count = native.getCount();
+        T* dst = native.getBuffer();
+
+        for (Index i = 0; i < count; ++i)
+        {
+            SerialTypeInfo<T>::replace(replacer, &dst[i]);
+        }
     }
 };
 
@@ -269,6 +303,29 @@ struct SerialTypeInfo<Dictionary<KEY, VALUE>>
             dst.Add(keys[i], values[i]);
         }
     }
+
+    static void replace(ISerialReplacer* replacer, void* inNative)
+    {
+        // TODO(JS): This might be overkill.. as it will attempt to do replacement, when there is no replacement to actually
+        // do.
+        // If we stored a value in the type whether it could do replacement we could avoid this work.
+        auto& dst = *(NativeType*)inNative;
+
+        List<KeyValuePair<KEY, VALUE>> pairs;
+        for (const auto& srcPair : dst)
+        {
+            pairs.add(srcPair);
+        }
+
+        dst.Clear();
+        for (KeyValuePair<KEY, VALUE> pair : pairs)
+        {
+            SerialTypeInfo<KEY>::replace(replacer, &pair.Key);
+            SerialTypeInfo<VALUE>::replace(replacer, &pair.Value);
+
+            dst.AddIfNotExists(pair.Key, pair.Value);
+        }
+    }
 };
 
 // Handle RefPtr - just convert into * to do the conversion
@@ -291,6 +348,12 @@ struct SerialTypeInfo<RefPtr<T>>
         SerialTypeInfo<T*>::toNative(reader, serial, &obj);
         *(NativeType*)native = obj;
     }
+    static void replace(ISerialReplacer* replacer, void* inNative)
+    {
+        NativeType& native = *(NativeType*)inNative;
+        native = dynamicCast<T>(replacer->replace(native));
+    }
+
 };
 
 // String
@@ -311,6 +374,18 @@ struct SerialTypeInfo<String>
         auto& src = *(const SerialType*)serial;
         auto& dst = *(NativeType*)native;
         dst = reader->getString(src);
+    }
+    static void replace(ISerialReplacer* replacer, void* inNative)
+    {
+        NativeType& native = *(NativeType*)inNative;
+
+        StringRepresentation* rep = native.getStringRepresentation();
+        StringRepresentation* repReplacement = dynamicCast<StringRepresentation>(replacer->replace(rep));
+
+        if (rep != repReplacement)
+        {
+            native = String(repReplacement);
+        }
     }
 };
 

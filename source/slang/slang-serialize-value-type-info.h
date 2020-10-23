@@ -23,6 +23,7 @@ namespace Slang {
 
 #define SLANG_VALUE_FIELD_TO_SERIAL(FIELD_NAME, TYPE, param) SerialTypeInfo<decltype(src->FIELD_NAME)>::toSerial(writer, &src->FIELD_NAME, &dst->FIELD_NAME);
 #define SLANG_VALUE_FIELD_TO_NATIVE(FIELD_NAME, TYPE, param) SerialTypeInfo<decltype(dst->FIELD_NAME)>::toNative(reader, &src->FIELD_NAME, &dst->FIELD_NAME);
+#define SLANG_VALUE_FIELD_REPLACE(FIELD_NAME, TYPE, param) SerialTypeInfo<decltype(dst->FIELD_NAME)>::replace(replacer, &dst->FIELD_NAME);
 
 #define SLANG_IF_HAS_SUPER_BASE(x)
 #define SLANG_IF_HAS_SUPER_INNER(x) x
@@ -46,6 +47,14 @@ static void toNative(SerialReader* reader, const void* serial, void* native) \
     SLANG_FIELDS_Value_##NAME(SLANG_VALUE_FIELD_TO_NATIVE, param) \
 }
 
+#define SLANG_VALUE_REPLACE(NAME, SUPER, ORIGIN, LAST, MARKER, TYPE, param) \
+static void replace(ISerialReplacer* replacer, void* inNative) \
+{ \
+    SLANG_IF_HAS_SUPER_##TYPE(SerialTypeInfo<SUPER>::replace(replacer, inNative);) \
+    auto dst = (NativeType*)inNative; \
+    SLANG_FIELDS_Value_##NAME(SLANG_VALUE_FIELD_REPLACE, param) \
+}
+
 //#define SLANG_VALUE_SERIAL_FIELD(FIELD_NAME, TYPE, param) SerialTypeInfo<SLANG_VALUE_GET_TYPE TYPE>::SerialType FIELD_NAME;
 #define SLANG_VALUE_SERIAL_FIELD(FIELD_NAME, TYPE, param) SerialTypeInfo<decltype(((param*)nullptr)->FIELD_NAME)>::SerialType FIELD_NAME;
 
@@ -66,11 +75,11 @@ struct SerialTypeInfo<NAME> \
     \
     SLANG_VALUE_TO_NATIVE(NAME, SUPER, ORIGIN, LAST, MARKER, TYPE, param) \
     SLANG_VALUE_TO_SERIAL(NAME, SUPER, ORIGIN, LAST, MARKER, TYPE, param) \
+    SLANG_VALUE_REPLACE(NAME, SUPER, ORIGIN, LAST, MARKER, TYPE, param) \
 };
     
 #define SLANG_VALUE_TYPE_INFO(NAME) \
     SLANG_Value_##NAME(SLANG_VALUE_TYPE_INFO_IMPL, _)
-
 
 } // namespace Slang
 
