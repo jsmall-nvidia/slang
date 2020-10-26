@@ -281,7 +281,7 @@ A way around this would be to not replace on reading (or only replace items that
 
 On the first point, this is perhaps undesirable (on a variety of levels - such as debugging), but isn't as terrible as it could be, as the actual type identification is managed by Slang via the `astTypeNode`. So there is a simple way of identifying what the type actually is.
 
-On the second point - this isn't so simple. If we had an indirection, we could do the replacement quickly and trivially, without having to to fix up all the pointers. We probably don't want to add such an indirection into the pointer based system so choices are
+On the second point - this isn't so simple. If we had an indirection, we could do the replacement quickly and trivially, without having to to fix up all the pointers. With using pointers, such an indirection is undesirable (but possible - most trivially with an indirection type, and when accessing a pointer, using the contained type). We probably do not want to use such a mechanism though, because it makes every access have to go through a test for a pointer indirection, and the pointer type wouldn't be quite right.
 
 * Store where all the pointers are, and fix them up
 * Traverse the hierarchy replacing pointers
@@ -289,6 +289,8 @@ On the second point - this isn't so simple. If we had an indirection, we could d
 Within the current mechanism storing where all the pointers are is not so simple - it would require the setting of any pointer to record where that pointer is stored, and for that to remain the location. Doing so would require setting all pointers to go through some recording mechanism. Pointers held in containers - like the Dictionary may not be directly available. Moreover even if they *were* doing such a behavior may break the containers invariants - for example replacing a keys pointer, may change it's hash.
 
 Traversing the hierarchy would be something akin to the serialization process. It would require specially handling for field types to do the replacement. There would need to be special handling for struct value types. 
+
+
 
 SourceLoc Serialization
 =======================
