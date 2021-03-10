@@ -32,6 +32,15 @@ struct ASTDumpUtil
     static void dump(NodeBase* node, Style style, Flags flags, SourceWriter* writer);
 };
 
+struct ASTAccessUtil
+{
+        /// Finds all the contained NodeBase references from within nodes fields.
+        /// Only outputs fields that are specified in the ASTNodeType. To output all nodes requires iterating through the
+        /// base classes. 
+        /// NOTE! Does not act recursively
+    static void findFieldContained(ASTNodeType astNodeType, NodeBase* node, List<NodeBase*>& out);
+};
+
 } // namespace Slang
 
 #endif

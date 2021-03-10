@@ -10,6 +10,116 @@
 
 namespace Slang {
 
+// Used to find the NodeBase derived references within reach from fields. 
+struct ASTAccessContext
+{
+    void access(NodeBase* node)
+    {
+        m_out->add(node);
+    }
+
+    void access(const Scope* scope)
+    {
+        // We don't need to do anything because will be accessed via normal traversal
+        SLANG_UNUSED(scope);
+    }
+
+    void access(const RefObject* obj)
+    {
+        SLANG_UNUSED(obj);
+    }
+
+    template <typename T>
+    void access(const List<T>& list)
+    {
+        for (Index i = 0; i < list.getCount(); ++i)
+        {
+            access(list[i]);
+        }
+    }
+
+    void access(const Modifiers& modifiers)
+    {
+        auto& nonConstModifiers = const_cast<Modifiers&>(modifiers);
+
+        for (const auto& mod : nonConstModifiers)
+        {
+            access(mod);
+        }
+    }
+
+    template <typename KEY, typename VALUE>
+    void access(const Dictionary<KEY, VALUE>& dict)
+    {
+        for (auto iter : dict)
+        {
+            const auto& key = iter.Key;
+            const auto& value = iter.Value;
+
+            access(key);
+            access(value);
+        }
+    }
+
+    void access(const QualType& qualType)
+    {
+        access(qualType.type);
+    }
+
+    template <typename T, int SIZE>
+    void access(const T(&in)[SIZE])
+    {
+        for (Index i = 0; i < Index(SIZE); ++i)
+        {
+            access(in[i]);
+        }
+    }
+
+    void access(const TypeExp& exp)
+    {
+        access(exp.exp);
+        access(exp.type);
+    }
+    void access(const ExpandedSpecializationArg& arg)
+    {
+        access(arg.witness);
+    }
+
+    void access(const TransparentMemberInfo& memInfo)
+    {
+        access(memInfo.decl);
+    }
+
+    void access(SourceLoc sourceLoc) { SLANG_UNUSED(sourceLoc); }
+    void access(const UnownedStringSlice& slice) { SLANG_UNUSED(slice); }
+    void access(const Token& token) { SLANG_UNUSED(token); }
+    void access(uint32_t v) { SLANG_UNUSED(v); }
+    void access(int32_t v) { SLANG_UNUSED(v); }
+    void access(FloatingPointLiteralValue v) { SLANG_UNUSED(v); }
+    void access(IntegerLiteralValue v) { SLANG_UNUSED(v); }
+    void access(const SemanticVersion& version) { SLANG_UNUSED(version); }
+    void access(const NameLoc& nameLoc) { SLANG_UNUSED(nameLoc); }
+    void access(BaseType baseType) { SLANG_UNUSED(baseType); }
+    void access(Stage stage) { SLANG_UNUSED(stage); }
+    void access(ImageFormat imageFormat) { SLANG_UNUSED(imageFormat); }
+    void access(const String& string) { SLANG_UNUSED(string); }
+    void access(const DiagnosticInfo* info) { SLANG_UNUSED(info); }
+    void access(const Layout* layout) { SLANG_UNUSED(layout); }
+    void access(ASTNodeType type) { SLANG_UNUSED(type); }
+    void access(const DeclCheckStateExt& state) { SLANG_UNUSED(state); }
+    void access(FeedbackType::Kind kind) { SLANG_UNUSED(kind); }
+    void access(TextureFlavor flavor) { SLANG_UNUSED(flavor); }
+    void access(const LookupResult& lookupResult) { SLANG_UNUSED(lookupResult); }
+    void access(const SamplerStateFlavor& flavor) { SLANG_UNUSED(flavor); }
+    void access(const MatrixCoord& coord) { SLANG_UNUSED(coord); }
+
+    template <typename T>
+    void access(const SyntaxClass<T>& cls) { SLANG_UNUSED(cls); }
+
+    ASTAccessContext(List<NodeBase*>* out): m_out(out) {}
+
+    List<NodeBase*>* m_out;
+};
 
 struct ASTDumpContext
 {
@@ -604,6 +714,24 @@ struct ASTDumpContext
 struct ASTDumpAccess
 {
 
+#define SLANG_AST_ACCESS_FIELD(FIELD_NAME, TYPE, param) context->access(static_cast<param*>(base)->FIELD_NAME); 
+
+#define SLANG_AST_ACCESS_FIELDS_IMPL(NAME, SUPER, ORIGIN, LAST, MARKER, TYPE, param) \
+case ASTNodeType::NAME: \
+{ \
+    SLANG_FIELDS_ASTNode_##NAME(SLANG_AST_ACCESS_FIELD, NAME) \
+    break; \
+}
+
+    static void access(ASTNodeType type, NodeBase* base, ASTAccessContext* context)
+    {
+        switch (type)
+        {
+            SLANG_ALL_ASTNode_NodeBase(SLANG_AST_ACCESS_FIELDS_IMPL, _)
+            default: break;
+        }
+    }
+
 #define SLANG_AST_DUMP_FIELD(FIELD_NAME, TYPE, param) context.dumpField(#FIELD_NAME, static_cast<param*>(base)->FIELD_NAME); 
 
 #define SLANG_AST_DUMP_FIELDS_IMPL(NAME, SUPER, ORIGIN, LAST, MARKER, TYPE, param) \
@@ -622,6 +750,12 @@ case ASTNodeType::NAME: \
         }
     }
 };
+
+/* static */void ASTAccessUtil::findFieldContained(ASTNodeType astNodeType, NodeBase* start, List<NodeBase*>& out)
+{
+    ASTAccessContext context(&out);
+    ASTDumpAccess::access(astNodeType, start, &context);
+}
 
 void ASTDumpContext::dumpObjectReference(const ReflectClassInfo& type, NodeBase* obj, Index objIndex)
 {

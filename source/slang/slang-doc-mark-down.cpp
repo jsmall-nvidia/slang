@@ -6,6 +6,8 @@
 #include "slang-ast-builder.h"
 #include "slang-lookup.h"
 
+#include "slang-ast-dump.h"
+
 namespace Slang {
 
 
@@ -378,7 +380,48 @@ void DocMarkDownWriter::_getUniqueParams(const List<Decl*>& decls, List<NameAndM
     }
 }
 
-static void _addRequirements(Decl* decl, HashSet<String>& outRequirements)
+// NOTE!
+// This is taken from almost verbatim from tryResolveDeclRefForCall
+// There could be an argument to expose directly from slang-lower-to-ir.cpp or have some external utils that can be used by both
+static DeclRef<Decl> _resolveDeclRefForCall(Expr* funcExpr)
+{
+    // TODO: unwrap any "identity" expressions that might
+    // be wrapping the callee.
+
+    // First look to see if the expression references a
+    // declaration at all.
+    auto declRefExpr = as<DeclRefExpr>(funcExpr);
+    if (declRefExpr)
+    {
+        // A little bit of future proofing here: if we ever
+        // allow higher-order functions, then we might be
+        // calling through a variable/field that has a function
+        // type, but is not itself a function.
+        // In such a case we should be careful to not statically
+        // resolve things.
+        if (auto callableDecl = as<CallableDecl>(declRefExpr->declRef.getDecl()))
+        {
+            // Okay, the declaration is directly callable, so we can continue.
+            // Now we can look at the specific kinds of declaration references,
+            // and try to tease them apart.
+            if (auto memberFuncExpr = as<MemberExpr>(funcExpr))
+            {
+                return memberFuncExpr->declRef;
+            }
+            else if (auto staticMemberFuncExpr = as<StaticMemberExpr>(funcExpr))
+            {
+                return staticMemberFuncExpr->declRef;
+            }
+            else if (auto varExpr = as<VarExpr>(funcExpr))
+            {
+                return varExpr->declRef;
+            }
+        }
+    }
+    return DeclRef<Decl>();
+}
+
+static void _addRequirementsForCallableDecl(CallableDecl* decl, HashSet<String>& outRequirements)
 {
     StringBuilder buf;
 
@@ -416,6 +459,89 @@ static void _addRequirements(Decl* decl, HashSet<String>& outRequirements)
     {
         outRequirements.Add("NVAPI");
     }
+}
+
+static void _findInvokes(HashSet<NodeBase*> ioSeenNodes, Stmt* stmt, List<InvokeExpr*>& outInvokes)
+{
+    if (stmt == nullptr)
+    {
+        return;
+    }
+
+    List<NodeBase*> nodes;
+    Index baseIndex = 0;
+
+    ioSeenNodes.Add(stmt);
+    nodes.add(stmt);
+
+    List<NodeBase*> foundNodes;
+
+    while (baseIndex < nodes.getCount())
+    {
+        NodeBase* node = nodes[baseIndex++];
+
+        if (InvokeExpr* invokeExpr = as<InvokeExpr>(node))
+        {
+            outInvokes.add(invokeExpr);
+        }
+        
+        foundNodes.clear();
+
+        // Find all the nodes referenced from fields. 
+        {
+            const ReflectClassInfo* curTypeInfo = ASTClassInfo::getInfo(node->astNodeType);
+            do
+            {
+                ASTAccessUtil::findFieldContained(ASTNodeType(curTypeInfo->m_classId), node, foundNodes);
+
+                curTypeInfo = curTypeInfo->m_superClass;
+            } while (curTypeInfo);   
+        }
+
+        for (NodeBase* foundNode : foundNodes)
+        {
+            if (!ioSeenNodes.Contains(foundNode))
+            {         
+                // Don't re-add it
+                ioSeenNodes.Add(foundNode);
+                nodes.add(node);
+            }
+        }
+    }
+}
+
+static void _addRequirementsRec(HashSet<NodeBase*>& ioSeenNodes, CallableDecl* decl, HashSet<String>& outRequirements)
+{
+    _addRequirementsForCallableDecl(decl, outRequirements);
+    ioSeenNodes.Add(decl);
+
+    List<InvokeExpr*> invokes;
+    Index baseIndex = 0;
+
+    FunctionDeclBase* funcDecl = as<FunctionDeclBase>(decl);
+    if (funcDecl && funcDecl->body)
+    {
+        // Lets just do this in a dumb manner...
+        _findInvokes(ioSeenNodes, funcDecl->body, invokes);
+    }
+
+    while (baseIndex < invokes.getCount())
+    {
+        InvokeExpr* invoke = invokes[baseIndex++];
+
+        DeclRef<Decl> callDeclRef = _resolveDeclRefForCall(invoke->functionExpr);
+
+        if (CallableDecl* calledDecl = as<CallableDecl>(callDeclRef.decl))
+        {
+            _addRequirementsForCallableDecl(calledDecl, outRequirements);
+        }
+    }
+}
+
+static void _addRequirements(CallableDecl* decl, HashSet<String>& outRequirements)
+{
+    HashSet<NodeBase*> seenNodes;
+    _addRequirementsRec(seenNodes, decl, outRequirements);
 }
 
 void DocMarkDownWriter::_maybeAppendSet(const UnownedStringSlice& title, const StringListSet& set)
