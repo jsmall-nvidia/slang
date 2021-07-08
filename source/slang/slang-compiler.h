@@ -2037,7 +2037,7 @@ namespace Slang
         LineDirectiveMode m_lineDirectiveMode = LineDirectiveMode::Default;
 
             /// Per-entry-point information not tracked by other compile requests
-        class EntryPointInfo : public RefObject
+        class EntryPointInfo //: public RefObject
         {
         public:
                 /// Source code for the specialization arguments to use for the specialization parameters of the entry point.
