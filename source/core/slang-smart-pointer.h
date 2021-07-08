@@ -7,13 +7,15 @@
 
 #include "../../slang.h"
 
+#include <atomic>
+
 namespace Slang
 {
     // Base class for all reference-counted objects
     class RefObject
     {
     private:
-        UInt referenceCount;
+        std::atomic<UInt> referenceCount;
 
     public:
         RefObject()
