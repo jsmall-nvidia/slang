@@ -1297,7 +1297,7 @@ namespace Slang
             sink);
     }
 
-    RefPtr<Scope> ComponentType::_createScopeForLegacyLookup()
+    AtomicRefPtr<Scope> ComponentType::_createScopeForLegacyLookup()
     {
         // The shape of this logic is dictated by the legacy
         // behavior for name-based lookup/parsing of types
