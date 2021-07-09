@@ -14,19 +14,19 @@ namespace Slang
         TranslationUnitRequest*         translationUnit,
         TokenSpan const&                tokens,
         DiagnosticSink*                 sink,
-        RefPtr<Scope> const&            outerScope);
+        AtomicRefPtr<Scope> const&            outerScope);
 
     Expr* parseTermFromSourceFile(
         ASTBuilder*                     astBuilder,
         TokenSpan const&                tokens,
         DiagnosticSink*                 sink,
-        RefPtr<Scope> const&            outerScope,
+        AtomicRefPtr<Scope> const&            outerScope,
         NamePool*                       namePool,
         SourceLanguage                  sourceLanguage);
 
     ModuleDecl* populateBaseLanguageModule(
         ASTBuilder*     astBuilder,
-        RefPtr<Scope>   scope);
+        AtomicRefPtr<Scope>   scope);
 
         /// Information used to set up SyntaxDecl. Such decls
         /// when correctly setup define a callback. For some of the callbacks it's necessary

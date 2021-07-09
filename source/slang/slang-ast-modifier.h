@@ -556,7 +556,7 @@ class UncheckedAttribute : public AttributeBase
 {
     SLANG_AST_CLASS(UncheckedAttribute)
  
-    RefPtr<Scope> scope;
+    AtomicRefPtr<Scope> scope;
 };
 
 // A `[name(arg0, ...)]` style attribute that has been validated.

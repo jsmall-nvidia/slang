@@ -1099,13 +1099,13 @@ namespace Slang
 
 
 
-    struct Scope : public RefObject
+    struct Scope : public AtomicRefObject
     {
         // The parent of this scope (where lookup should go if nothing is found locally)
-        RefPtr<Scope>           parent;
+        AtomicRefPtr<Scope>           parent;
 
         // The next sibling of this scope (a peer for lookup)
-        RefPtr<Scope>           nextSibling;
+        AtomicRefPtr<Scope>           nextSibling;
 
         // The container to use for lookup
         //
@@ -1365,8 +1365,8 @@ namespace Slang
     struct LookupRequest
     {
         SemanticsVisitor*   semantics   = nullptr;
-        RefPtr<Scope>       scope       = nullptr;
-        RefPtr<Scope>       endScope    = nullptr;
+        AtomicRefPtr<Scope>       scope       = nullptr;
+        AtomicRefPtr<Scope>       endScope    = nullptr;
 
         LookupMask          mask        = LookupMask::Default;
         LookupOptions       options     = LookupOptions::None;

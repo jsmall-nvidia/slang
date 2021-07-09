@@ -384,7 +384,7 @@ class UsingDecl : public Decl
     Expr* arg;
 
         /// The scope that the entity named by `arg` will be brought into
-    RefPtr<Scope> scope;
+    AtomicRefPtr<Scope> scope;
 };
 
 class ImportDecl : public Decl
@@ -395,7 +395,7 @@ class ImportDecl : public Decl
     NameLoc moduleNameAndLoc;
 
     // The scope that we want to import into
-    RefPtr<Scope> scope;
+    AtomicRefPtr<Scope> scope;
 
     // The module that actually got imported
     ModuleDecl* importedModuleDecl = nullptr;

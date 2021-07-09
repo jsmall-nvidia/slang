@@ -1308,7 +1308,7 @@ namespace Slang
         // definitions (that scope is necessary because
         // it defines keywords like `true` and `false`).
         //
-        RefPtr<Scope> scope = new Scope();
+        AtomicRefPtr<Scope> scope = new Scope();
         scope->parent = getLinkage()->getSessionImpl()->slangLanguageScope;
         //
         // Next, the scope needs to include all of the
@@ -1317,7 +1317,7 @@ namespace Slang
         //
         for( auto module : getModuleDependencies() )
         {
-            RefPtr<Scope> moduleScope = new Scope();
+            AtomicRefPtr<Scope> moduleScope = new Scope();
             moduleScope->containerDecl = module->getModuleDecl();
 
             moduleScope->nextSibling = scope->nextSibling;
@@ -1340,7 +1340,7 @@ namespace Slang
         auto unspecialiedProgram = endToEndReq->getUnspecializedGlobalComponentType();
 
 
-        RefPtr<Scope> scope = unspecialiedProgram->_createScopeForLegacyLookup();
+        AtomicRefPtr<Scope> scope = unspecialiedProgram->_createScopeForLegacyLookup();
 
         // We are going to do some semantic checking, so we need to
         // set up a `SemanticsVistitor` that we can use.

@@ -478,7 +478,7 @@ namespace Slang
             /// This facility is only needed to support legacy APIs for string-based lookup
             /// and parsing via Slang reflection, and is not recommended for future APIs to use.
             ///
-        RefPtr<Scope> _createScopeForLegacyLookup();
+        AtomicRefPtr<Scope> _createScopeForLegacyLookup();
 
     protected:
         ComponentType(Linkage* linkage);
@@ -2259,10 +2259,10 @@ namespace Slang
             /// Get the default compiler for a language
         DownstreamCompiler* getDefaultDownstreamCompiler(SourceLanguage sourceLanguage);
 
-        RefPtr<Scope>   baseLanguageScope;
-        RefPtr<Scope>   coreLanguageScope;
-        RefPtr<Scope>   hlslLanguageScope;
-        RefPtr<Scope>   slangLanguageScope;
+        AtomicRefPtr<Scope>   baseLanguageScope;
+        AtomicRefPtr<Scope>   coreLanguageScope;
+        AtomicRefPtr<Scope>   hlslLanguageScope;
+        AtomicRefPtr<Scope>   slangLanguageScope;
 
         ModuleDecl* baseModuleDecl = nullptr;
         List<RefPtr<Module>> stdlibModules;
@@ -2321,7 +2321,7 @@ namespace Slang
         void init();
 
         void addBuiltinSource(
-            RefPtr<Scope> const&    scope,
+            AtomicRefPtr<Scope> const&    scope,
             String const&           path,
             String const&           source);
         ~Session();

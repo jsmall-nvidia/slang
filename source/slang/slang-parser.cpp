@@ -91,8 +91,8 @@ namespace Slang
 
         int anonymousCounter = 0;
 
-        RefPtr<Scope> outerScope;
-        RefPtr<Scope> currentScope;
+        AtomicRefPtr<Scope> outerScope;
+        AtomicRefPtr<Scope> currentScope;
 
         TokenReader tokenReader;
         DiagnosticSink* sink;
@@ -114,7 +114,7 @@ namespace Slang
         }
         void PushScope(ContainerDecl* containerDecl)
         {
-            RefPtr<Scope> newScope = new Scope();
+            AtomicRefPtr<Scope> newScope = new Scope();
             newScope->containerDecl = containerDecl;
             newScope->parent = currentScope;
 
@@ -135,7 +135,7 @@ namespace Slang
             ASTBuilder* inAstBuilder,
             TokenSpan const& _tokens,
             DiagnosticSink * sink,
-            RefPtr<Scope> const& outerScope)
+            AtomicRefPtr<Scope> const& outerScope)
             : tokenReader(_tokens)
             , astBuilder(inAstBuilder)
             , sink(sink)
@@ -1236,7 +1236,7 @@ namespace Slang
         }
     }
 
-    static void AddMember(RefPtr<Scope> scope, Decl* member)
+    static void AddMember(AtomicRefPtr<Scope> scope, Decl* member)
     {
         if (scope)
         {
@@ -1399,7 +1399,7 @@ namespace Slang
     class ReplaceScopeVisitor : public ExprVisitor<ReplaceScopeVisitor>
     {
     public:
-        RefPtr<Scope> scope;
+        AtomicRefPtr<Scope> scope;
         void visitDeclRefExpr(DeclRefExpr* expr)
         {
             expr->scope = scope;
@@ -5504,7 +5504,7 @@ namespace Slang
         ASTBuilder*                     astBuilder,
         TokenSpan const&                tokens,
         DiagnosticSink*                 sink,
-        RefPtr<Scope> const&            outerScope,
+        AtomicRefPtr<Scope> const&            outerScope,
         NamePool*                       namePool,
         SourceLanguage                  sourceLanguage)
     {
@@ -5521,7 +5521,7 @@ namespace Slang
         TranslationUnitRequest*         translationUnit,
         TokenSpan const&                tokens,
         DiagnosticSink*                 sink,
-        RefPtr<Scope> const&            outerScope)
+        AtomicRefPtr<Scope> const&            outerScope)
     {
         Parser parser(astBuilder, tokens, sink, outerScope);
         parser.namePool = translationUnit->getNamePool();
@@ -6077,7 +6077,7 @@ namespace Slang
 
     ModuleDecl* populateBaseLanguageModule(
         ASTBuilder*     astBuilder,
-        RefPtr<Scope>   scope)
+        AtomicRefPtr<Scope>   scope)
     {
         Session* session = astBuilder->getGlobalSession();
 

@@ -1358,7 +1358,7 @@ Type* ComponentType::getTypeFromString(
     // the modules that were directly or
     // indirectly referenced.
     //
-    RefPtr<Scope> scope = _createScopeForLegacyLookup();
+    AtomicRefPtr<Scope> scope = _createScopeForLegacyLookup();
 
     auto linkage = getLinkage();
     Expr* typeExpr = linkage->parseTermString(
@@ -1675,7 +1675,7 @@ void FrontEndCompileRequest::parseTranslationUnit(
     // would be checked too (after those on the FrontEndCompileRequest). 
     IncludeSystem includeSystem(&linkage->searchDirectories, linkage->getFileSystemExt(), linkage->getSourceManager());
 
-    RefPtr<Scope> languageScope;
+    AtomicRefPtr<Scope> languageScope;
     switch (translationUnit->sourceLanguage)
     {
     case SourceLanguage::HLSL:
@@ -3762,7 +3762,7 @@ RefPtr<Module> findOrImportModule(
 }
 
 void Session::addBuiltinSource(
-    RefPtr<Scope> const&    scope,
+    AtomicRefPtr<Scope> const&    scope,
     String const&           path,
     String const&           source)
 {

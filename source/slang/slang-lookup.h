@@ -21,7 +21,7 @@ LookupResult lookUp(
     ASTBuilder*         astBuilder, 
     SemanticsVisitor*   semantics,
     Name*               name,
-    RefPtr<Scope>       scope,
+    AtomicRefPtr<Scope>       scope,
     LookupMask          mask = LookupMask::Default);
 
 // Perform member lookup in the context of a type

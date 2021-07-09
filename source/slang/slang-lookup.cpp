@@ -918,7 +918,7 @@ LookupResult lookUp(
     ASTBuilder*         astBuilder, 
     SemanticsVisitor*   semantics,
     Name*               name,
-    RefPtr<Scope>       scope,
+    AtomicRefPtr<Scope>       scope,
     LookupMask          mask)
 {
     LookupRequest request;
