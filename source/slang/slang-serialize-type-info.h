@@ -181,6 +181,27 @@ struct SerialTypeInfo<RefPtr<T>>
     }
 };
 
+template <typename T>
+struct SerialTypeInfo<AtomicRefPtr<T>>
+{
+    typedef AtomicRefPtr<T> NativeType;
+    typedef SerialIndex SerialType;
+    enum { SerialAlignment = SLANG_ALIGN_OF(SerialType) };
+
+    static void toSerial(SerialWriter* writer, const void* native, void* serial)
+    {
+        SLANG_UNUSED(native);
+        SLANG_UNUSED(writer);
+        *(SerialType*)serial = SerialType(0);
+    }
+    static void toNative(SerialReader* reader, const void* serial, void* native)
+    {
+        SLANG_UNUSED(reader);
+        SLANG_UNUSED(serial);
+        *(NativeType*)native = nullptr;
+    }
+};
+
 // Special case Name
 template <>
 struct SerialTypeInfo<Name*> : public SerialTypeInfo<RefObject*>
