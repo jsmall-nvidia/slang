@@ -1425,7 +1425,7 @@ namespace Slang
         ///
         SlangResult loadFile(String const& path, PathInfo& outPathInfo, ISlangBlob** outBlob);
 
-        Expr* parseTermString(String str, RefPtr<Scope> scope);
+        Expr* parseTermString(String str, AtomicRefPtr<Scope> scope);
 
         Type* specializeType(
             Type*           unspecializedType,

@@ -1291,7 +1291,7 @@ SlangResult Linkage::loadFile(String const& path, PathInfo& outPathInfo, ISlangB
     return SLANG_OK;
 }
 
-Expr* Linkage::parseTermString(String typeStr, RefPtr<Scope> scope)
+Expr* Linkage::parseTermString(String typeStr, AtomicRefPtr<Scope> scope)
 {
     // Create a SourceManager on the stack, so any allocations for 'SourceFile'/'SourceView' etc will be cleaned up
     SourceManager localSourceManager;
