@@ -261,9 +261,7 @@ namespace Slang
     class AtomicRefObject
     {
     private:
-        UInt referenceCount;
-
-        std::thread::id m_threadId = std::this_thread::get_id();
+        std::atomic<UInt> referenceCount;
 
     public:
         AtomicRefObject()
@@ -315,13 +313,7 @@ namespace Slang
             return referenceCount;
         }
 
-        void checkThreadID()
-        {
-            if (m_threadId != std::this_thread::get_id())
-            {
-                SLANG_BREAKPOINT(0);
-            }
-        }
+        virtual void checkThreadID() = 0;
     };
 
     SLANG_FORCE_INLINE void addReference(AtomicRefObject* obj)

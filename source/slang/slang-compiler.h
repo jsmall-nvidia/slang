@@ -2334,6 +2334,8 @@ namespace Slang
         RefPtr<DownstreamCompiler> m_downstreamCompilers[int(PassThroughMode::CountOf)];        ///< A downstream compiler for a pass through
         DownstreamCompilerLocatorFunc m_downstreamCompilerLocators[int(PassThroughMode::CountOf)];
 
+        std::atomic<std::thread::id> m_threadID;
+
     private:
 
         SlangResult _readBuiltinModule(ISlangFileSystem* fileSystem, Scope* scope, String moduleName);

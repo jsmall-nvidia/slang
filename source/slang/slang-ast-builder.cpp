@@ -4,7 +4,17 @@
 
 #include "slang-compiler.h"
 
+#include "slang-ast-support-types.h"
+
 namespace Slang {
+
+void Scope::checkThreadID() 
+{
+    if (session->m_threadID != std::this_thread::get_id())
+    {
+        SLANG_BREAKPOINT(0);
+    }
+}
 
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! SharedASTBuilder !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 

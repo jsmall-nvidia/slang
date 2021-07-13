@@ -5003,7 +5003,7 @@ namespace Slang
 
         // Create a new sub-scope to wire the module
         // into our lookup chain.
-        auto subScope = new Scope();
+        auto subScope = new Scope(getSession());
         subScope->containerDecl = moduleDecl;
 
         subScope->nextSibling = scope->nextSibling;
@@ -5105,7 +5105,7 @@ namespace Slang
         // of entities than just namespaces.
         //
         auto scope = decl->scope;
-        auto subScope = new Scope();
+        auto subScope = new Scope(getSession());
         subScope->containerDecl = namespaceDecl;
         subScope->nextSibling = scope->nextSibling;
         scope->nextSibling = subScope;

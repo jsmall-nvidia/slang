@@ -1101,6 +1101,11 @@ namespace Slang
 
     struct Scope : public AtomicRefObject
     {
+
+        Scope(Session* inSession):session(inSession) {}
+
+        virtual void checkThreadID() SLANG_OVERRIDE;
+
         // The parent of this scope (where lookup should go if nothing is found locally)
         AtomicRefPtr<Scope>           parent;
 
@@ -1113,6 +1118,8 @@ namespace Slang
         // so that a scope can't keep parts of the AST alive,
         // but the opposite it allowed.
         ContainerDecl*          containerDecl = nullptr;
+
+        Session* session;
     };
 
     // Masks to be applied when lookup up declarations

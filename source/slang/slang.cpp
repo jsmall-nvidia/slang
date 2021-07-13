@@ -159,20 +159,20 @@ void Session::init()
     // TODO: load these on-demand to avoid parsing
     // stdlib code for languages the user won't use.
 
-    baseLanguageScope = new Scope();
+    baseLanguageScope = new Scope(this);
 
     // Will stay in scope as long as ASTBuilder
     baseModuleDecl = populateBaseLanguageModule(
         m_builtinLinkage->getASTBuilder(),
         baseLanguageScope);
 
-    coreLanguageScope = new Scope();
+    coreLanguageScope = new Scope(this);
     coreLanguageScope->nextSibling = baseLanguageScope;
 
-    hlslLanguageScope = new Scope();
+    hlslLanguageScope = new Scope(this);
     hlslLanguageScope->nextSibling = coreLanguageScope;
 
-    slangLanguageScope = new Scope();
+    slangLanguageScope = new Scope(this);
     slangLanguageScope->nextSibling = hlslLanguageScope;
 
     {
@@ -484,6 +484,9 @@ SLANG_NO_THROW SlangResult SLANG_MCALL Session::createSession(
 
 SLANG_NO_THROW SlangResult SLANG_MCALL Session::createCompileRequest(slang::ICompileRequest** outCompileRequest)
 {
+    // Set the thread id
+    m_threadID = std::this_thread::get_id();
+
     auto req = new EndToEndCompileRequest(this);
 
     // Give it a ref (for output)

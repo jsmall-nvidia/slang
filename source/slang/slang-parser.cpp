@@ -114,7 +114,7 @@ namespace Slang
         }
         void PushScope(ContainerDecl* containerDecl)
         {
-            AtomicRefPtr<Scope> newScope = new Scope();
+            AtomicRefPtr<Scope> newScope = new Scope(currentScope->session);
             newScope->containerDecl = containerDecl;
             newScope->parent = currentScope;
 
