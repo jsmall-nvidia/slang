@@ -1308,7 +1308,7 @@ namespace Slang
         // definitions (that scope is necessary because
         // it defines keywords like `true` and `false`).
         //
-        AtomicRefPtr<Scope> scope = new Scope(m_linkage->getSession());
+        AtomicRefPtr<Scope> scope = new Scope(m_linkage->getSessionImpl());
         scope->parent = getLinkage()->getSessionImpl()->slangLanguageScope;
         //
         // Next, the scope needs to include all of the
@@ -1317,7 +1317,7 @@ namespace Slang
         //
         for( auto module : getModuleDependencies() )
         {
-            AtomicRefPtr<Scope> moduleScope = new Scope(m_linkage->getSession());
+            AtomicRefPtr<Scope> moduleScope = new Scope(m_linkage->getSessionImpl());
             moduleScope->containerDecl = module->getModuleDecl();
 
             moduleScope->nextSibling = scope->nextSibling;

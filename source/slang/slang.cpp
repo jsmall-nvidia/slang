@@ -417,7 +417,7 @@ SlangResult Session::_readBuiltinModule(ISlangFileSystem* fileSystem, Scope* sco
         else
         {
             // We need to create a new scope to link into the whole thing
-            auto subScope = new Scope();
+            auto subScope = new Scope(this);
             subScope->containerDecl = moduleDecl;
             subScope->nextSibling = scope->nextSibling;
             scope->nextSibling = subScope;
@@ -3822,7 +3822,7 @@ void Session::addBuiltinSource(
     else
     {
         // We need to create a new scope to link into the whole thing
-        auto subScope = new Scope();
+        auto subScope = new Scope(this);
         subScope->containerDecl = moduleDecl;
         subScope->nextSibling = scope->nextSibling;
         scope->nextSibling = subScope;
