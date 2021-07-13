@@ -117,6 +117,8 @@ const char* getBuildTagString()
 
 void Session::init()
 {
+    m_threadID = std::this_thread::get_id();
+
     SLANG_ASSERT(BaseTypeInfo::check());
 
     ::memset(m_downstreamCompilerLocators, 0, sizeof(m_downstreamCompilerLocators));
