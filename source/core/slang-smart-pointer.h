@@ -6,6 +6,7 @@
 #include "slang-type-traits.h"
 
 #include <atomic>
+#include <thread>
 
 #include "../../slang.h"
 
@@ -260,7 +261,9 @@ namespace Slang
     class AtomicRefObject
     {
     private:
-        std::atomic<UInt> referenceCount;
+        UInt referenceCount;
+
+        std::thread::id m_threadId = std::this_thread::get_id();
 
     public:
         AtomicRefObject()
@@ -278,16 +281,20 @@ namespace Slang
 
         UInt addReference()
         {
+            checkThreadID();
             return ++referenceCount;
         }
 
         UInt decreaseReference()
         {
+            checkThreadID();
             return --referenceCount;
         }
 
         UInt releaseReference()
         {
+            checkThreadID();
+
             SLANG_ASSERT(referenceCount != 0);
             if (--referenceCount == 0)
             {
@@ -306,6 +313,14 @@ namespace Slang
         UInt debugGetReferenceCount()
         {
             return referenceCount;
+        }
+
+        void checkThreadID()
+        {
+            if (m_threadId != std::this_thread::get_id())
+            {
+                SLANG_BREAKPOINT(0);
+            }
         }
     };
 
